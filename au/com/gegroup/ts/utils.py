@@ -31,8 +31,18 @@ def get_query(datetime_filter, tags_filter, key):
     :param key:
     :return:
     """
-    if len(datetime_filter) > 5:
+    # if both None then it will be unbounded read
+    if datetime_filter is None and tags_filter is None:
+        raise Exception("Either datetime_filter or tags_filter must be present")
+    # if both are present, then these should be connected by "and" in sql query to be constructed
+    if datetime_filter is not None and tags_filter is not None:
         datetime_filter += " and "
+    elif datetime_filter is None:
+        datetime_filter = ""
+    # if either datetime_filter or tags_filter is None, then replace it with empty string
+    if tags_filter is None:
+        tags_filter = ""
+
     select = "select datetime as time, value as %(key)s_value , pointName as %(key)s_pointName, equipRef as equipRef," \
              " levelRef as %(key)s_levelRef, siteRef as %(key)s_siteRef from iotDF" % ({'key': key})
     sql = "%(select)s  where %(date_filter)s  %(tags_filter)s" % (

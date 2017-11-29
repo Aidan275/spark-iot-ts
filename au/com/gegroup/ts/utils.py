@@ -23,13 +23,14 @@ def date_to_long(date_string, unit='ms'):
         return int(date_val / 1000000000)
 
 
-def get_query(datetime_filter, tags_filter, key):
+def get_query(view_name, datetime_filter, tags_filter, key):
     """
     constructs sql query for getting histories based on meta tags and date filter
+    :param view_name: temp sql table that is created using "df.createOrReplaceTempView(view_name)"
     :param datetime_filter: date_filter constructed with from_date and to_date
     :param tags_filter: tags_filter constructed with metadata
-    :param key:
-    :return:
+    :param key: for identifying timeseries and columns when joined
+    :return: sql query to get the required timeseries
     """
     # if both None then it will be unbounded read
     if datetime_filter is None and tags_filter is None:
@@ -44,7 +45,8 @@ def get_query(datetime_filter, tags_filter, key):
         tags_filter = ""
 
     select = "select datetime as time, value as %(key)s_value , pointName as %(key)s_pointName, equipRef as equipRef," \
-             " levelRef as %(key)s_levelRef, siteRef as %(key)s_siteRef from iotDF" % ({'key': key})
+             " levelRef as %(key)s_levelRef, siteRef as %(key)s_siteRef from %(view)s" % \
+             ({'key': key, 'view': view_name})
     sql = "%(select)s  where %(date_filter)s  %(tags_filter)s" % (
         {'date_filter': datetime_filter, 'tags_filter': tags_filter, 'select': select})
     return sql
@@ -69,8 +71,3 @@ def get_tags_filter(metadata_str):
             tag_filters.append(tag.strip() + " = '1'")
     return " and ".join(tag_filters)
 
-
-def read(key, from_date, to_date, tags):
-    date_filter = get_datetime_filter(date_to_long(from_date), date_to_long(to_date))
-    tags_filter = get_tags_filter(tags)
-    return get_query(date_filter, tags_filter, key)

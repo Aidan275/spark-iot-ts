@@ -1,4 +1,4 @@
-from au.com.gegroup.ts.utils import *
+from au.com.gegroup.ts.datetime.utils import *
 # testing date to long conversion
 date_ms = date_to_long("2017-10-01")
 assert date_ms == 1506816000000

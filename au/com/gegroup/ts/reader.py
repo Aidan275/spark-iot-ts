@@ -1,7 +1,8 @@
 __author__ = 'topsykretts'
 
 from ts.flint import FlintContext
-from .utils import as_long_tuple
+
+from au.com.gegroup.ts.datetime.utils import as_long_tuple
 
 
 class Reader(object):

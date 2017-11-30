@@ -3,7 +3,7 @@ from au.com.gegroup.ts.datetime.utils import *
 date_ms = date_to_long("2017-10-01")
 assert date_ms == 1506816000000
 
-print(last24hour())
+print(last(pd.Timedelta('1 days')))
 
 print("yesterday")
 print(yesterday())
@@ -14,6 +14,7 @@ print(this_month())
 
 print("last_month")
 print(last_month())
+print(as_long_tuple(last_month()))
 
 print("test as_long_tuple")
-print(as_long_tuple((1511827200000,1511913599999)))
+print(as_long_tuple((1511827200000, 1511913599999)))

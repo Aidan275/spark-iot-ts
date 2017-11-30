@@ -30,11 +30,10 @@ def date_to_long(date_string, unit='ms'):
         return int(date_val / 1000000000)
 
 
-def last24hour():
-    one_day = pd.Timedelta('1 days')
+def last(delta):
     now = pd.datetime.now()
-    yest = now - one_day
-    date_tuple = (yest, now)
+    past = now - delta
+    date_tuple = (past, now)
     return date_tuple
 
 

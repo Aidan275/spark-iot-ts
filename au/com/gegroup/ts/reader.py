@@ -30,6 +30,7 @@ class Reader(object):
         df = self._sqlContext.read.format("filodb.spark").option("dataset", filodb_dataset).load()
         if load_filter is not None:
             df = df.filter(load_filter)
+        self.df = df
         df.createOrReplaceTempView(self.view_name)
 
     def metadata(self, metadata):

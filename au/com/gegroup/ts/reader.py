@@ -13,11 +13,12 @@ class Reader(object):
     dataset 'iot_history_v0' for site 'Site'.
     Load filter is None by default.
     """
-    def __init__(self, sqlContext, filodb_dataset, view_name, load_filter=None):
+
+    def __init__(self, sqlContext, dataset, view_name, load_filter=None):
         """
-        constructor for Reader object
+        constructor for Reader object to read from filodb
         :param sqlContext: current spark's sqlContext
-        :param filodb_dataset: the filodb dataset that should be loaded
+        :param dataset: the filodb dataset name or dataframe that should be loaded
         :param view_name: the name to temp table, that will be used in constructed queries
         :param load_filter: filter string to filter the dataset. Eg: "siteRef = 'Site'"
         :return: Reader object
@@ -25,15 +26,20 @@ class Reader(object):
         self._sqlContext = sqlContext
         self._fc = FlintContext(self._sqlContext)
         self.view_name = view_name
-        self.filodb_dataset = filodb_dataset
         self.load_filter = load_filter
         self._date_filter = None
         self._tag_filter = None
-        df = self._sqlContext.read.format("filodb.spark").option("dataset", filodb_dataset).load()
+        self._is_sorted = True
+        if isinstance(dataset, str):
+            self.filodb_dataset = dataset
+            df = self._sqlContext.read.format("filodb.spark").option("dataset", dataset).load()
+        else:
+            self.filodb_dataset = None
+            df = dataset
         if load_filter is not None:
             df = df.filter(load_filter)
-        self.df = df
-        df.createOrReplaceTempView(self.view_name)
+        self._df = df
+        self._df.createOrReplaceTempView(self.view_name)
 
     def metadata(self, metadata):
         """
@@ -54,16 +60,25 @@ class Reader(object):
         self._date_filter = Reader._get_datetime_filter(date_tuple[0], date_tuple[1])
         return self
 
-    def read(self, key):
+    def is_sorted(self, is_sorted):
+        """
+        builder that sets is_sorted param
+        :param is_sorted: Either True or False
+        :return: reader object
+        """
+        self._is_sorted = is_sorted
+        return self
+
+    def read(self):
         """
         Construct a query with date_filter, tags_filter and key and reads from temp view created
         :param key: key for the timeseries dataframe that will be used for joins
         :return: flint's Timeseries dataframe
         """
-        query = self._get_query(key)
-        return self._fc.read.dataframe(self._sqlContext.sql(query), is_sorted=True, unit='ms')
+        query = self._get_query()
+        return self._fc.read.dataframe(self._sqlContext.sql(query), is_sorted=self._is_sorted, unit='ms')
 
-    def _get_query(self, key):
+    def _get_query(self):
         """
         constructs sql query for getting histories based on meta tags and date filter
         :param key: for identifying timeseries and columns when joined
@@ -85,12 +100,15 @@ class Reader(object):
         else:
             tag_filter = self._tag_filter
 
-        select = "select datetime as time, value as %(key)s_value , pointName as %(key)s_pointName, equipRef as equipRef," \
-                 " levelRef as %(key)s_levelRef, siteRef as %(key)s_siteRef from %(view)s" % \
-                 ({'key': key, 'view': self.view_name})
+        select = "select datetime as time, value as value , pointName as pointName, equipRef as equipRef," \
+                 " levelRef as levelRef, siteRef as siteRef from %(view)s" % \
+                 ({'view': self.view_name})
         sql = "%(select)s  where %(date_filter)s  %(tags_filter)s" % (
             {'date_filter': datetime_filter, 'tags_filter': tag_filter, 'select': select})
         return sql
+
+    def get_df(self):
+        return self._df
 
     @staticmethod
     def _get_datetime_filter(from_date, to_date):
@@ -111,4 +129,3 @@ class Reader(object):
             else:
                 tag_filters.append(tag.strip() + " = '1'")
         return " and ".join(tag_filters)
-

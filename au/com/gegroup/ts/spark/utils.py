@@ -9,3 +9,7 @@ def filter_null(key1, key2):
 
 def get_value_col(key):
     return col("%(key)s_value" % ({'key': key}))
+
+
+def join_keys():
+    return ["siteRef", "levelRef", "equipRef"]

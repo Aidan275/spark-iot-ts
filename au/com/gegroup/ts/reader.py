@@ -27,6 +27,8 @@ class Reader(object):
         self.view_name = view_name
         self.filodb_dataset = filodb_dataset
         self.load_filter = load_filter
+        self._date_filter = None
+        self._tag_filter = None
         df = self._sqlContext.read.format("filodb.spark").option("dataset", filodb_dataset).load()
         if load_filter is not None:
             df = df.filter(load_filter)

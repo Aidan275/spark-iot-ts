@@ -14,13 +14,13 @@ class Writer(object):
         :param row_keys: unique key to identify each row
         :return:
         """
-        self.df = dataframe
-        self.dataset = dataset
-        self.row_keys = row_keys
+        self._df = dataframe
+        self._dataset = dataset
+        self._row_keys = row_keys
         # default values
-        self.mode = "overwrite"
-        self.chunk_size = "100"
-        self.partition_keys = ":string %(dataset)s" % ({"dataset": dataset})
+        self._mode = "overwrite"
+        self._chunk_size = "100"
+        self._partition_keys = ":string %(dataset)s" % ({"dataset": dataset})
 
     def cols(self, cols):
         """
@@ -28,7 +28,7 @@ class Writer(object):
         :param cols: A list of column names
         :return:
         """
-        self.df = self.df.select(cols)
+        self._df = self._df.select(cols)
         return self
 
     def mode(self, mode):
@@ -37,7 +37,7 @@ class Writer(object):
         :param mode: overwrite or append
         :return:
         """
-        self.mode = mode
+        self._mode = mode
         return self
 
     def partition_keys(self, partition_keys):
@@ -46,7 +46,7 @@ class Writer(object):
         :param partition_keys: an filoDB partition_keys expression or column name or combinations.
         :return:
         """
-        self.partition_keys = partition_keys
+        self._partition_keys = partition_keys
         return self
 
     def chunk_size(self, chunk_size):
@@ -55,7 +55,7 @@ class Writer(object):
         :param chunk_size: numeric string value.
         :return:
         """
-        self.chunk_size = chunk_size
+        self._chunk_size = chunk_size
         return self
 
     def write(self):
@@ -63,10 +63,10 @@ class Writer(object):
         initiate write process
         :return:
         """
-        self.df.write.format("filodb.spark") \
-            .option("dataset", self.dataset) \
-            .option("partition_keys", self.partition_keys) \
-            .option("row_keys", self.row_keys) \
-            .option("chunk_size", self.chunk_size) \
-            .mode(self.mode) \
+        self._df.write.format("filodb.spark") \
+            .option("dataset", self._dataset) \
+            .option("partition_keys", self._partition_keys) \
+            .option("row_keys", self._row_keys) \
+            .option("chunk_size", self._chunk_size) \
+            .mode(self._mode) \
             .save()

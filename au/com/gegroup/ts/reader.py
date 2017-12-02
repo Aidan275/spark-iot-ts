@@ -74,18 +74,22 @@ class Reader(object):
             raise Exception("Either datetime_filter or tags_filter must be present")
         # if both are present, then these should be connected by "and" in sql query to be constructed
         if self._date_filter is not None and self._tag_filter is not None:
-            self._date_filter += " and "
+            datetime_filter = self._date_filter + " and "
         elif self._date_filter is None:
-            self._date_filter = ""
+            datetime_filter = ""
+        else:
+            datetime_filter = self._date_filter
         # if either datetime_filter or tags_filter is None, then replace it with empty string
         if self._tag_filter is None:
-            self._tag_filter = ""
+            tag_filter = ""
+        else:
+            tag_filter = self._tag_filter
 
         select = "select datetime as time, value as %(key)s_value , pointName as %(key)s_pointName, equipRef as equipRef," \
                  " levelRef as %(key)s_levelRef, siteRef as %(key)s_siteRef from %(view)s" % \
                  ({'key': key, 'view': self.view_name})
         sql = "%(select)s  where %(date_filter)s  %(tags_filter)s" % (
-            {'date_filter': self._date_filter, 'tags_filter': self._tag_filter, 'select': select})
+            {'date_filter': datetime_filter, 'tags_filter': tag_filter, 'select': select})
         return sql
 
     @staticmethod

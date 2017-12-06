@@ -76,7 +76,7 @@ class Reader(object):
         :return: flint's Timeseries dataframe
         """
         query = self._get_query()
-        return self._fc.read.dataframe(self._sqlContext.sql(query), is_sorted=self._is_sorted, unit='ms')
+        return self._fc.read.dataframe(self._sqlContext.sql(query), is_sorted=self._is_sorted, unit='ns')
 
     def _get_query(self):
         """

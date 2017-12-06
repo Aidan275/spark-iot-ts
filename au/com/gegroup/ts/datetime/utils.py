@@ -3,14 +3,14 @@ __author__ = 'topsykretts'
 import pandas as pd
 
 
-def as_long_tuple(date_tuple, unit='ms'):
+def as_long_tuple(date_tuple, unit='ns'):
     if isinstance(date_tuple[0], int) and isinstance(date_tuple[1], int):
         return date_tuple
     long_tuple = (date_to_long(date_tuple[0], unit), date_to_long(date_tuple[1], unit))
     return long_tuple
 
 
-def date_to_long(date_string, unit='ms'):
+def date_to_long(date_string, unit='ns'):
     """
     converts date string provided in pandas datetime64 recognizable format to long, depending on unit provided
     :param date_string: date string in format recognizable by pandas datetime64

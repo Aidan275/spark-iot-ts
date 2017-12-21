@@ -51,5 +51,28 @@ class GraphFramesReadWriteTest(SparkTestCase):
 
 # --------------------------------------------------------------------------------------------------------------------
 
+    def test_read_from_dataframe(self):
+        """
+        Provision to read timeseries directly from dataframe
+        """
+        schema = ["datetime", "siteRef", "levelRef", "equipRef", "pointName", "value"]
+        ts = [
+            (1000, "site1", "level1", "Site ACU 1", "ACU-1_SAT", 23.52),
+            (1001, "site1", "level1", "Site ACU 1", "ACU-1_RAT", 20.52),
+            (1002, "site1", "level1", "Site ACU 1", "ACU-1_SAT", 21.52),
+            (1003, "site1", "level1", "Site ACU 1", "ACU-1_RAT", 18.52),
+            (1000, "site1", "level1", "Site ACU 1", "ACU-1_SATSP", 15.6),
+            (1003, "site1", "level1", "Site ACU 1", "ACU-1_SATSP", 16.7)
+        ]
+        # create dataframe
+        input_df = self.sqlContext.createDataFrame(ts, schema)
+        # read from dataframe with load_filter neglecting SATSP
+        reader = GraphFramesReader(self.sqlContext, input_df, "test_iot_gf_rwt_2", "siteRef = 'site1'")
+        # read sat points based on metadata
+        sat_ts = reader.metadata("supply and air and sensor and levelRef = 'level1'").is_sorted(False).read()
+        sat_ts.show()
+        # assert only ACU-1_SAT points are read
+        assert (sat_ts.select("pointName").distinct().collect()[0][0]) == "ACU-1_SAT"
+
 if __name__ == '__main__':
     unittest.main()

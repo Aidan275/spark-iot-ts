@@ -42,13 +42,13 @@ class IOTHistoryReader(Reader):
         tag_query = " select dis from metadata where " + tags
         rows = self._sqlContext.sql(tag_query).collect()
         point_names = []
-        for row in rows:
-            point_names.append("pointName = '"+row[0]+"'")
-        self._tag_filter = "(" + " or ".join(point_names) + ")"
-
         # for row in rows:
-        #     point_names.append("'"+row[0]+"'")
-        # self._tag_filter = "pointName in (" + ",".join(point_names) + ")"
+        #     point_names.append("pointName = '"+row[0]+"'")
+        # self._tag_filter = "(" + " or ".join(point_names) + ")"
+
+        for row in rows:
+            point_names.append("'"+row[0]+"'")
+        self._tag_filter = "pointName in (" + ",".join(point_names) + ")"
         return self
 
     def _get_query(self):

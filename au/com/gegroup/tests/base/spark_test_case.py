@@ -32,6 +32,7 @@ class SparkTestCase(BaseTestCase):
         """Starts spark and sets attributes `sc,sqlContext and flintContext"""
         from pyspark.sql import SparkSession, SQLContext
         spark_session = SparkSession.builder.appName("test").master("local") \
+            .config("spark.filodb.store", "in-memory") \
             .config("spark.ui.enabled", "false") \
             .getOrCreate()
 

@@ -11,6 +11,7 @@ class IOTHistoryReader(Reader):
     dataset 'iot_history_v0' for site 'Site'.
     Load filter is None by default.
     """
+
     def __init__(self, sqlContext, dataset, view_name, load_filter=None):
         """
         constructor for Reader object to read from filodb
@@ -21,13 +22,30 @@ class IOTHistoryReader(Reader):
         :return: Reader object
         """
         super().__init__(sqlContext, dataset, view_name, load_filter)
+
+        # metadata_dataset = os.getenv("FILODB_METADATA_DATASET", "points_metadata_v0")
+        # self._metadata_df = sqlContext.read.format("filodb.spark").option("dataset", metadata_dataset).load()
+        self._set_metadata()
+        self._ref_filter = None
+
+    def _set_metadata(self):
         import os
-        # todo metadata from jdbc or other relational database if required
-        metadata_dataset = os.getenv("FILODB_METADATA_DATASET", "points_metadata_v0")
-        self._metadata_df = sqlContext.read.format("filodb.spark").option("dataset", metadata_dataset).load()
+        user = os.getenv("META_JDBC_USER", "hive")
+        password = os.getenv("META_JDBC_PASSWORD", "hive")
+        host = os.getenv("META_JDBC_HOST", "localhost")
+        port = os.getenv("META_JDBC_PORT", "3306")
+        database = os.getenv("META_JDBC_DATABASE", "gegroup")
+        table = os.getenv("META_JDBC_TABLE", "metadata")
+        jdbc_url = "jdbc:mysql://%(host)s:%(port)s/%(database)s" % ({"host": host, "port": port, "database": database})
+        database_properties = {
+            "driver": "com.mysql.jdbc.Driver",
+            "user": user,
+            "password": password,
+            "rewriteBatchedStatements": "true"
+        }
+        self._metadata_df = self._sqlContext.read.jdbc(url=jdbc_url, table=table, properties=database_properties)
         self._metadata_df.cache()
         self._metadata_df.createOrReplaceTempView("metadata")
-        self._ref_filter = None
 
     def metadata(self, metadata):
         """
@@ -47,7 +65,7 @@ class IOTHistoryReader(Reader):
         # self._tag_filter = "(" + " or ".join(point_names) + ")"
 
         for row in rows:
-            point_names.append("'"+row[0]+"'")
+            point_names.append("'" + row[0] + "'")
         self._tag_filter = "pointName in (" + ",".join(point_names) + ")"
         return self
 
@@ -78,4 +96,3 @@ class IOTHistoryReader(Reader):
             else:
                 meta_tags.append(tag.strip() + " = '1'")
         return {'meta_tags': "and ".join(meta_tags), 'ref_filter': " and ".join(ref_filter)}
-

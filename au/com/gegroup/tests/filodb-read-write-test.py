@@ -62,9 +62,9 @@ class FiloDBReadWriteTest(SparkTestCase):
         # create dataframe
         input_df = self.sqlContext.createDataFrame(ts, schema)
         # read from dataframe with load_filter neglecting SATSP
-        reader = IOTHistoryReader(self.sqlContext, input_df, "test_iot_hybrid_rwt_2", "siteRef = 'site1'")
+        reader = IOTHistoryReader(self.sqlContext, input_df, "test_iot_hybrid_rwt_2", 'siteRef == "site1"')
         # read sat points based on metadata
-        sat_ts = reader.metadata("supply and air and sensor and levelRef = 'level1'").is_sorted(False).read()
+        sat_ts = reader.metadata("supply and air and sensor and levelRef == \"Site Plant\"").is_sorted(False).read()
         sat_ts.show()
         # assert only ACU-1_SAT points are read
         assert (sat_ts.select("pointName").distinct().collect()[0][0]) == "ACU-1_SAT"

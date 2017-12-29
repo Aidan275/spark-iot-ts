@@ -30,3 +30,4 @@ class GraphMetadata:
             graph_df.vertices.cache()
             graph_df.edges.cache()
             GraphMetadata.__instance = graph_df
+

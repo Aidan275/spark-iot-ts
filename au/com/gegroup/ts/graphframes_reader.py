@@ -1,4 +1,4 @@
-from au.com.gegroup.ts.graph_metadata import GraphMetadata
+from au.com.gegroup.ts.metadata.graph_metadata import GraphMetadata
 from au.com.gegroup.ts.reader import Reader
 from pyspark.sql.functions import *
 from pyspark.sql.types import *

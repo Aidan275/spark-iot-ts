@@ -100,7 +100,7 @@ class Reader(object):
         else:
             tag_filter = self._tag_filter
 
-        select = "select datetime as time, value as value , pointName as pointName, equipRef as equipRef," \
+        select = "select timestamp as timestamp, datetime as time, value as value , pointName as pointName, equipRef as equipRef," \
                  " levelRef as levelRef, siteRef as siteRef from %(view)s" % \
                  ({'view': self.view_name})
         sql = "%(select)s  where %(date_filter)s  %(tags_filter)s" % (

@@ -50,7 +50,7 @@ class FiloDBReadWriteTest(SparkTestCase):
         """
         Provision to read timeseries directly from dataframe
         """
-        schema = ["datetime", "siteRef", "levelRef", "equipRef", "pointName", "value"]
+        schema = ["datetime", "siteRef", "levelRef", "equipName", "pointName", "value"]
         ts = [
             (1000, "site1", "level1", "Site ACU 1", "ACU-1_SAT", 23.52),
             (1001, "site1", "level1", "Site ACU 1", "ACU-1_RAT", 20.52),

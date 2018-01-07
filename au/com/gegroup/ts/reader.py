@@ -110,8 +110,12 @@ class Reader(object):
         if not self._timestamp:
             timestamp_select = ''
 
-        select = "select %(timestamp)s datetime as time, value as value , pointName as pointName, siteRef as siteRef from %(view)s" % \
-                 ({'view': self.view_name, 'timestamp': timestamp_select})
+        equip_name_select = ''
+        if "equipName" in self._df.columns:
+            equip_name_select = ", equipName"
+
+        select = "select %(timestamp)s datetime as time, value as value , pointName as pointName, siteRef as siteRef %(equipName)s from %(view)s" % \
+                 ({'view': self.view_name, 'timestamp': timestamp_select, 'equipName': equip_name_select})
         sql = "%(select)s  where %(date_filter)s  %(tags_filter)s" % (
             {'date_filter': datetime_filter, 'tags_filter': tag_filter, 'select': select})
         return sql

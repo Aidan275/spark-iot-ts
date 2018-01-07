@@ -63,6 +63,7 @@ class FiloDBReadWriteTest(SparkTestCase):
         input_df = self.sqlContext.createDataFrame(ts, schema)
         # read from dataframe with load_filter neglecting SATSP
         reader = IOTHistoryReader(self.sqlContext, input_df, "test_iot_hybrid_rwt_2", 'siteRef == "site1"')
+        reader.has_timestamp(False)
         # read sat points based on metadata
         sat_ts = reader.metadata("supply and air and sensor and levelRef == \"Site Plant\"").is_sorted(False).read()
         sat_ts.show()

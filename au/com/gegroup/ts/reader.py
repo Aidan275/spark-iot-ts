@@ -14,19 +14,19 @@ class Reader(object):
     Load filter is None by default.
     """
 
-    def __init__(self, sqlContext, dataset, view_name, load_filter=None):
+    def __init__(self, sqlContext, dataset, view_name, rule_on=None):
         """
         constructor for Reader object to read from filodb
         :param sqlContext: current spark's sqlContext
         :param dataset: the filodb dataset name or dataframe that should be loaded
         :param view_name: the name to temp table, that will be used in constructed queries
-        :param load_filter: filter string to filter the dataset. Eg: "siteRef = 'Site'"
+        :param rule_on: filter string to filter the dataset. Eg: "siteRef = 'Site'"
         :return: Reader object
         """
         self._sqlContext = sqlContext
         self._fc = FlintContext(self._sqlContext)
         self.view_name = view_name
-        self.load_filter = load_filter
+        self.load_filter = rule_on
         self._date_filter = None
         self._tag_filter = None
         self._is_sorted = True
@@ -36,10 +36,16 @@ class Reader(object):
         else:
             self.filodb_dataset = None
             df = dataset
-        if load_filter is not None:
-            df = df.filter(load_filter)
+        if rule_on is not None:
+            df = df.filter(rule_on)
         self._df = df
         self._df.createOrReplaceTempView(self.view_name)
+        self._timestamp = True
+        self._tag_query = None
+
+    def has_timestamp(self, boolean):
+        self._timestamp = boolean
+        return self
 
     def metadata(self, metadata):
         """
@@ -100,9 +106,12 @@ class Reader(object):
         else:
             tag_filter = self._tag_filter
 
-        select = "select timestamp as timestamp, datetime as time, value as value , pointName as pointName, equipRef as equipRef," \
-                 " levelRef as levelRef, siteRef as siteRef from %(view)s" % \
-                 ({'view': self.view_name})
+        timestamp_select = "timestamp as timestamp,"
+        if not self._timestamp:
+            timestamp_select = ''
+
+        select = "select %(timestamp)s datetime as time, value as value , pointName as pointName, siteRef as siteRef from %(view)s" % \
+                 ({'view': self.view_name, 'timestamp': timestamp_select})
         sql = "%(select)s  where %(date_filter)s  %(tags_filter)s" % (
             {'date_filter': datetime_filter, 'tags_filter': tag_filter, 'select': select})
         return sql

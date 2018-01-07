@@ -15,18 +15,18 @@ class IOTHistoryReader(Reader):
     Load filter is None by default.
     """
 
-    def __init__(self, sqlContext, dataset, view_name, load_filter=None):
+    def __init__(self, sqlContext, dataset, view_name, rule_on=None):
         """
         constructor for Reader object to read from filodb
         :param sqlContext: current spark's sqlContext
         :param dataset: the filodb dataset name or dataframe that should be loaded
         :param view_name: the name to temp table, that will be used in constructed queries
-        :param load_filter: haystack format filter string to filter the dataset. Eg: 'siteRef == "Site"'
+        :param rule_on: haystack format filter string to filter the dataset. Eg: 'siteRef == "Site"'
         :return: Reader object
         """
-        if load_filter is not None:
-            load_filter = to_sql_parser.parse(load_filter)
-        super().__init__(sqlContext, dataset, view_name, load_filter)
+        if rule_on is not None:
+            rule_on = to_sql_parser.parse(rule_on)
+        super().__init__(sqlContext, dataset, view_name, rule_on)
 
         # metadata_dataset = os.getenv("FILODB_METADATA_DATASET", "points_metadata_v0")
         # self._metadata_df = sqlContext.read.format("filodb.spark").option("dataset", metadata_dataset).load()

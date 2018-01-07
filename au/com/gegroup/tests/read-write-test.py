@@ -66,7 +66,7 @@ class ReadWriteTest(SparkTestCase):
         # create dataframe
         input_df = self.sqlContext.createDataFrame(ts, schema)
         # read from dataframe with load_filter neglecting SATSP
-        reader = Reader(self.sqlContext, input_df, "test_iot_rwt_2", "sensor = '1'")
+        reader = Reader(self.sqlContext, input_df, "test_iot_rwt_2", "sensor = '1'").has_timestamp(False)
         # read sat points based on metadata
         sat_ts = reader.metadata("supply and air").is_sorted(False).read()
         # assert only ACU-1_SAT points are read

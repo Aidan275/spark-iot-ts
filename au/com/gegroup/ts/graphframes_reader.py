@@ -8,8 +8,8 @@ __author__ = 'topsykretts'
 
 class GraphFramesReader(Reader):
 
-    def __init__(self, sqlContext, dataset, view_name, load_filter=None):
-        super().__init__(sqlContext, dataset, view_name, load_filter)
+    def __init__(self, sqlContext, dataset, view_name, rule_on=None):
+        super().__init__(sqlContext, dataset, view_name, rule_on)
         # Get a GraphFrame instance
         self.graph_df = GraphMetadata.getInstance(sqlContext)
         self._vertices = self.graph_df.vertices

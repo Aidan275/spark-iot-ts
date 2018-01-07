@@ -67,7 +67,7 @@ class GraphFramesReadWriteTest(SparkTestCase):
         # create dataframe
         input_df = self.sqlContext.createDataFrame(ts, schema)
         # read from dataframe with load_filter neglecting SATSP
-        reader = GraphFramesReader(self.sqlContext, input_df, "test_iot_gf_rwt_2", "siteRef = 'site1'")
+        reader = GraphFramesReader(self.sqlContext, input_df, "test_iot_gf_rwt_2", "siteRef = 'site1'").has_timestamp(False)
         # read sat points based on metadata
         sat_ts = reader.metadata("supply and air and sensor and levelRef = 'level1'").is_sorted(False).read()
         sat_ts.show()

@@ -14,19 +14,19 @@ class Reader(object):
     Load filter is None by default.
     """
 
-    def __init__(self, sqlContext, dataset, view_name, rule_on=None):
+    def __init__(self, sqlContext, dataset, view_name, site_filter=None):
         """
         constructor for Reader object to read from filodb
         :param sqlContext: current spark's sqlContext
         :param dataset: the filodb dataset name or dataframe that should be loaded
         :param view_name: the name to temp table, that will be used in constructed queries
-        :param rule_on: filter string to filter the dataset. Eg: "siteRef = 'Site'"
+        :param site_filter: filter string to filter the dataset. Eg: 'siteRef == "Site"'
         :return: Reader object
         """
         self._sqlContext = sqlContext
         self._fc = FlintContext(self._sqlContext)
         self.view_name = view_name
-        self.load_filter = rule_on
+        self.load_filter = site_filter
         self._date_filter = None
         self._tag_filter = None
         self._is_sorted = True
@@ -36,8 +36,8 @@ class Reader(object):
         else:
             self.filodb_dataset = None
             df = dataset
-        if rule_on is not None:
-            df = df.filter(rule_on)
+        if site_filter is not None:
+            df = df.filter(site_filter)
         self._df = df
         self._df.createOrReplaceTempView(self.view_name)
         self._timestamp = True

@@ -15,22 +15,39 @@ class IOTHistoryReader(Reader):
     Load filter is None by default.
     """
 
-    def __init__(self, sqlContext, dataset, view_name, rule_on=None):
+    def __init__(self, sqlContext, dataset, view_name, rule_on=None, site_filter=None):
         """
         constructor for Reader object to read from filodb
         :param sqlContext: current spark's sqlContext
         :param dataset: the filodb dataset name or dataframe that should be loaded
         :param view_name: the name to temp table, that will be used in constructed queries
-        :param rule_on: haystack format filter string to filter the dataset. Eg: 'siteRef == "Site"'
+        :param site_filter: haystack format filter string of equipment level. Eg: 'equip and boiler'
+        :param site_filter: haystack format filter string of site level. Directly applied to history. Eg: 'siteRef == "Site"'
         :return: Reader object
         """
+        if site_filter is not None:
+            site_filter = to_sql_parser.parse(site_filter)
+        super().__init__(sqlContext, dataset, view_name, site_filter)
+        self._set_metadata()
+        self._rule_on = None
+        self.handle_rule_on(rule_on)
+
+    def handle_rule_on(self, rule_on):
         if rule_on is not None:
             rule_on = to_sql_parser.parse(rule_on)
-        super().__init__(sqlContext, dataset, view_name, rule_on)
+            equip_query = "select equipRef from metadata where " + rule_on
+            # print("Rule on query = ", equip_query)
+            rows = self._sqlContext.sql(equip_query).collect()
+            equip_refs = []
+            for row in rows:
+                equip_refs.append("'" + row[0] + "'")
+            if len(equip_refs) > 0:
+                self._rule_on = "equipRef in (" + ",".join(equip_refs) + ")"
+            else:
+                self._rule_on = "false"
+                print("Rule on didn't match with any records..")
+            # print(self._rule_on)
 
-        # metadata_dataset = os.getenv("FILODB_METADATA_DATASET", "points_metadata_v0")
-        # self._metadata_df = sqlContext.read.format("filodb.spark").option("dataset", metadata_dataset).load()
-        self._set_metadata()
 
     def _set_metadata(self):
         self._metadata_df = ESMetadata.getInstance(self._sqlContext)
@@ -44,12 +61,11 @@ class IOTHistoryReader(Reader):
         :return: reader object with tag_filter initialized
         """
         sql = to_sql_parser.parse(metadata)
-        tag_query = " select dis from metadata where " + sql
+        tag_query = " select dis from metadata where dis IS NOT NULL and " + sql
+        if self._rule_on is not None:
+            tag_query += " and " + self._rule_on
         rows = self._sqlContext.sql(tag_query).collect()
         point_names = []
-        # for row in rows:
-        #     point_names.append("pointName = '"+row[0]+"'")
-        # self._tag_filter = "(" + " or ".join(point_names) + ")"
 
         for row in rows:
             point_names.append("'" + row[0] + "'")

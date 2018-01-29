@@ -34,6 +34,6 @@ class ESMetadata:
                 "es.resource": resource
             }
             metadata_df = sqlContext.read.format("org.elasticsearch.spark.sql").options(**es_properties).load()
-            metadata_df.cache()
+            # metadata_df.cache()
             ESMetadata.__instance = metadata_df
 

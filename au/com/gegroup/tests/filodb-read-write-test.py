@@ -91,7 +91,7 @@ class FiloDBReadWriteTest(SparkTestCase):
                                   rule_on='equip and (fan or boiler)')
         reader.has_timestamp(False)
         # read sat points based on metadata
-        sat_ts = reader.metadata("supply and air and sensor").is_sorted(False).read()
+        sat_ts = reader.metadata("supply and air and sensor and levelRef == \"Site Plant\"").is_sorted(False).read()
         # sat_ts.show()
 
         rat_ts = reader.metadata("return and air and sensor").is_sorted(False).read()

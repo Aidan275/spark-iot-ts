@@ -50,11 +50,13 @@ class HaystackToSQL(parsimonious.NodeVisitor):
             decimal = "-"? digits ("." digits)?
             digits = ~r'[0-9][0-9_]*'i
             """)
+        self.cols = None
 
     def visit_term(self,node,children):
         return children
 
     def visit_name(self,node,children):
+        self.cols.append(node.text.strip())
         return True
 
     def visit_condAnd(self,node,children):
@@ -152,7 +154,6 @@ class HaystackToSQL(parsimonious.NodeVisitor):
         return tag + " != 1"
 
     def parse(self, text):
+        self.cols = []
         ret = super().parse(text)
-        return ret
-
-to_sql_parser = HaystackToSQL()
+        return ret, self.cols

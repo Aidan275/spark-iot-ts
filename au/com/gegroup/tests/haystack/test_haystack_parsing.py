@@ -14,8 +14,8 @@ class HaystackParsingTest(BaseTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        from au.com.gegroup.haystack import to_sql_parser
-        cls.parser = to_sql_parser
+        from au.com.gegroup.haystack import HaystackToSQL
+        cls.parser = HaystackToSQL()
 
     def test_parsing_simple_marker(self):
         """
@@ -23,28 +23,28 @@ class HaystackParsingTest(BaseTestCase):
         :return:
         """
         tag_haystack_query = "supply and air and temp and sensor"
-        tag_sql_result = self.parser.parse(tag_haystack_query)
+        tag_sql_result = self.parser.parse(tag_haystack_query)[0]
         assert "supply = 1 and air = 1 and temp = 1 and sensor = 1" == tag_sql_result
 
     def test_parsing_markers_with_parens_and_not(self):
         tag_haystack_query = "supply and (air or pressure) and temp and not sensor"
-        tag_sql_result = self.parser.parse(tag_haystack_query)
+        tag_sql_result = self.parser.parse(tag_haystack_query)[0]
         assert "supply = 1 and ( air = 1 or pressure = 1 ) and temp = 1 and sensor != 1" == tag_sql_result
 
     def test_parsing_tag_and_non_tag_query(self):
         haystack_query = "return and water and temp and not sensor and equipRef==\"equip123\""
-        sql_result = self.parser.parse(haystack_query)
+        sql_result = self.parser.parse(haystack_query)[0]
         assert "return = 1 and water = 1 and temp = 1 and sensor != 1 and equipRef = 'equip123'" == sql_result
 
     def test_nested_parenthesis(self):
         haystack_query = '(return and (temp or otherVal == "abc" )) or (supply and pressure)'
-        sql_result = self.parser.parse(haystack_query)
+        sql_result = self.parser.parse(haystack_query)[0]
         assert "( return = 1 and ( temp = 1 or otherVal = 'abc' ) ) or ( supply = 1 and pressure = 1 )" == \
                sql_result
 
     def test_non_tag_only(self):
         haystack_query = 'siteRef == "site1"'
-        sql_result = self.parser.parse(haystack_query)
+        sql_result = self.parser.parse(haystack_query)[0]
         print(sql_result)
         assert "siteRef = 'site1'" == sql_result
 

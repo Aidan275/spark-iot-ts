@@ -24,6 +24,7 @@ class HaystackToSQL(parsimonious.NodeVisitor):
     https://project-haystack.org/doc/Filters
     This work is derived from Christopher Andronikos <can@gegroup.com.au> 's project.
     """
+
     def __init__(self):
         self.grammar = Grammar("""\
             filter = condOr
@@ -39,12 +40,15 @@ class HaystackToSQL(parsimonious.NodeVisitor):
             cmpOp = "==" / "!=" / "<=" / ">=" / "<" / ">"
             path = name ws* pathSeq
             pathSeq = ( "->" name )*
+
             ws = " "*
 
             name = ~"(?!not)[a-z][_a-z0-9A-Z]*"
 
-            val = str / bool / number
+            val = bool / ref/ str / number
             bool = "true" / "false"
+            ref = "@" refVal (ws str)?
+            refVal = ~r'[0-9a-zA-Z_:\-.\~]*'i
             str = ~r'"(?P<content>[A-Z 0-9]*)"'i
             number = decimal
             decimal = "-"? digits ("." digits)?
@@ -55,53 +59,76 @@ class HaystackToSQL(parsimonious.NodeVisitor):
     def visit_term(self,node,children):
         return children
 
-    def visit_name(self,node,children):
+    def visit_name(self, node, children):
         self.cols.append(node.text.strip())
         return True
 
-    def visit_condAnd(self,node,children):
+    def visit_condAnd(self, node, children):
         children = flatten(children)
-        return " and ".join(children)
+        return self.construct_query(children, "and")
 
-    def visit_condAndSeq(self,node,children):
+    def construct_query(self, childern, join_type):
+        ref_map = {}
+        ref_less = []
+        join_type = " " + join_type + " "
+        for node in childern:
+            if "->" in node:
+                values = node.split("->")
+                ref = values[0].strip()
+                val = values[1].strip()
+                if ref in ref_map.keys():
+                    val_list = ref_map[ref]
+                    val_list.append(val)
+                else:
+                    val_list = [val]
+                ref_map[ref] = val_list
+            else:
+                ref_less.append(node)
+
+        for ref in ref_map.keys():
+            val = ref_map[ref]
+            query = ref + " in (select " + ref + " from metadata where " + join_type.join(val) + ")"
+            ref_less.append(query)
+        return join_type.join(ref_less)
+
+    def visit_condAndSeq(self, node, children):
         return children[3][0]
 
-    def visit_condOr(self,node,children):
+    def visit_condOr(self, node, children):
         children = flatten(children)
-        return " or ".join(children)
+        return self.construct_query(children, "or")
 
-
-    def visit_cmp(self,node,children):
+    def visit_cmp(self, node, children):
         path = children[0]
         op = children[2]
         val = children[4][0]
         return path.strip()+" "+op+" "+val.strip()
 
-    def visit_cmpOp(self,node,children):
+    def visit_cmpOp(self, node, children):
         if node.text == "==":
             return "="
         else:
             return node.text
 
-    def visit_bool(self,node,children):
-        return True if node.text=="true" else False
+    def visit_bool(self, node, children):
+        return '1' if node.text == "true" else '0'
 
-    def visit_str(self,node,children):
+    def visit_str(self, node, children):
         content = node.match.group('content')
-        return "'"+content+"'"
+        return "'" + content + "'"
 
-    def visit_number(self,node,children):
-        content = float(node.text)
+    def visit_number(self, node, children):
+        content = node.text
         return content
 
-    def visit_decimal(self,node,children):
-        content = float(node.text)
+    def visit_decimal(self, node, children):
+        content = node.text
         return content
 
-    def visit_digits(self,node,children):
+    def visit_digits(self, node, children):
         return node.text
 
-    def visit_strChar(self,node,children):
+    def visit_strChar(self, node, children):
         """
         See below function `visit_double_quoted_text`
         https://programtalk.com/vs2/python/8755/dxr/dxr/query.py/
@@ -109,49 +136,53 @@ class HaystackToSQL(parsimonious.NodeVisitor):
         content = node.match.group('content')
         return content
 
-    def visit_val(self,node,children):
+    def visit_val(self, node, children):
         return children
 
-    def visit_parens(self,node,children):
+    def visit_parens(self, node, children):
         children = flatten(children)
         rets = []
         for sub_child in children:
-            rets.append("( "+sub_child+" )")
+            rets.append("( " + sub_child + " )")
         return rets
 
-    def visit_filter(self,node,children):
+    def visit_filter(self, node, children):
         return children
 
-    def visit_condOrSeq(self,node,children):
+    def visit_condOrSeq(self, node, children):
         children = flatten(children)
 
         return children
 
-    def visit_has(self,node,children):
+    def visit_has(self, node, children):
         tag = node.text.strip()
         return tag + " = 1"
 
-    def visit_path(self,node,children):
+    def visit_path(self, node, children):
         return node.text
 
-    def visit_pathSeq(self,node,children):
-        if(len(children)>1):
-            raise(Exception("Pathing not supported"))
+    def visit_pathSeq(self, node, children):
         return children
 
     def generic_visit(self, node, children):
-        if node.expr_name=='ws':
+        if node.expr_name == 'ws':
             pass
         elif node.expr_name == '':
             pass
         else:
-            print("generic", "'"+node.expr_name+"'")
+            print("generic", "'" + node.expr_name + "'")
         return children
 
     def visit_missing(self, node, children):
         children = flatten(children)
         tag = children[0].strip()
         return tag + " != 1"
+
+    def visit_ref(self, node, childern):
+        return "'" + flatten(childern)[0] + "'"
+
+    def visit_refVal(self, node, children):
+        return node.text
 
     def parse(self, text):
         self.cols = []

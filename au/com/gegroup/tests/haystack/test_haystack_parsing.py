@@ -92,5 +92,18 @@ class HaystackParsingTest(BaseTestCase):
                "equipRef in (select equipRef from metadata where boiler = 1 and capacity = 100) and" \
                " siteRef in (select siteRef from metadata where boiler = 1 and air = 1)" == sql_result[0]
 
+    def test_null_query(self):
+        haystack_query = "air and temp and return and sensor == null"
+        sql_result = self.parser.parse(haystack_query)
+        print(sql_result[0])
+        assert "air = 1 and temp = 1 and return = 1 and sensor is null" == sql_result[0]
+
+    def test_not_null_query(self):
+        haystack_query = "air and temp and return and sensor != null"
+        sql_result = self.parser.parse(haystack_query)
+        print(sql_result[0])
+        assert "air = 1 and temp = 1 and return = 1 and sensor is not null" == sql_result[0]
+
+
 if __name__ == '__main__':
     unittest.main()

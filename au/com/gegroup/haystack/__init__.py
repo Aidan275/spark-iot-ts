@@ -45,8 +45,9 @@ class HaystackToSQL(parsimonious.NodeVisitor):
 
             name = ~"(?!not)[a-z][_a-z0-9A-Z]*"
 
-            val = bool / ref/ str / number
+            val = bool / ref/ str / number / null
             bool = "true" / "false"
+            null = "null"
             ref = "@" refVal (ws str)?
             refVal = ~r'[0-9a-zA-Z_:\-.\~]*'i
             str = ~r'"(?P<content>[A-Z 0-9]*)"'i
@@ -102,6 +103,13 @@ class HaystackToSQL(parsimonious.NodeVisitor):
         path = children[0]
         op = children[2]
         val = children[4][0]
+        # handling null and not null query..
+        if val is None:
+            val = "null"
+            if op == "=":
+                op = "is"
+            elif op == "!=":
+                op = "is not"
         return path.strip()+" "+op+" "+val.strip()
 
     def visit_cmpOp(self, node, children):
@@ -109,6 +117,9 @@ class HaystackToSQL(parsimonious.NodeVisitor):
             return "="
         else:
             return node.text
+
+    def visit_null(self, node, children):
+        return None
 
     def visit_bool(self, node, children):
         return '1' if node.text == "true" else '0'

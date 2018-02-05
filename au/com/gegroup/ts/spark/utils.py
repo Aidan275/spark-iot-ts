@@ -13,3 +13,7 @@ def get_value_col(key):
 
 def join_keys():
     return ["siteRef", "levelRef", "equipRef"]
+
+
+def is_empty(df):
+    return df.first() is None

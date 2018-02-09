@@ -2,7 +2,7 @@ __author__ = 'topsykretts'
 
 from pyspark.sql.functions import col
 from pyspark.sql.window import Window
-from pyspark.sql.types import StringType, DoubleType
+from pyspark.sql.types import StringType, DoubleType, TimestampType
 import pyspark.sql.functions as func
 import datetime
 from pytz import timezone
@@ -28,11 +28,13 @@ def is_not_empty(df):
     return not is_empty(df)
 
 
-def get_timestamp_col(df, col_name, time_col="time", tz="Australia/Sydney"):
+def get_timestamp_col(df, col_name, time_col="time", tz=None):
+    if tz is None:
+        tz = "Australia/Sydney"
+
     def convert_ns_to_timestamp(ns):
-        return datetime.datetime.fromtimestamp(ns/(1000*1000*1000), tz=timezone(tz)).\
-            strftime("%Y-%m-%dT%H:%M:%S")
-    udf_convert_timestamp = func.udf(lambda time: convert_ns_to_timestamp(time))
+        return datetime.datetime.fromtimestamp(ns/(1000*1000*1000), tz=timezone(tz))
+    udf_convert_timestamp = func.udf(lambda time: convert_ns_to_timestamp(time), TimestampType())
     return df.withColumn(col_name, udf_convert_timestamp(func.col(time_col)))
 
 

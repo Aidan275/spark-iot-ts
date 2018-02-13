@@ -102,7 +102,37 @@ def join_bool(left, right, left_alias, right_alias, keys=None):
         return numbered_df.drop("rn")
 
 
-def union_bool(df, left_alias, right_alias):
+def mismatch_bool(df, left_alias, right_alias, col_name="mismatch"):
+    """
+
+    :param df:
+    :param left_alias:
+    :param right_alias:
+    :return:
+    """
+    def find_mismatch(left_val, right_val):
+        if left_val is None or right_val is None:
+                return None
+        else:
+                if left_val == 0:
+                    left_bool = False
+                else:
+                    left_bool = True
+
+                if right_val == 0:
+                    right_bool = False
+                else:
+                    right_bool = True
+        if (right_bool and not left_bool) or (not right_bool and left_bool):
+            return 1.0
+        else:
+            return 0.0
+    udf_find_mismatch = func.udf(lambda left_val, right_val: find_mismatch(left_val, right_val), DoubleType())
+    df = df.withColumn(col_name, udf_find_mismatch(get_value_col(left_alias), get_value_col(right_alias)))
+    return to_skyspark_run_signal(df, col_name)
+
+
+def union_bool(df, left_alias, right_alias, col_name="union"):
         """
 
         :param df:
@@ -133,11 +163,11 @@ def union_bool(df, left_alias, right_alias):
 
         udf_find_union = func.udf(lambda left_val, right_val: find_union(left_val, right_val), DoubleType())
 
-        df = df.withColumn("union", udf_find_union(get_value_col(left_alias), get_value_col(right_alias)))
-        return to_skyspark_run_signal(df, "union")
+        df = df.withColumn(col_name, udf_find_union(get_value_col(left_alias), get_value_col(right_alias)))
+        return to_skyspark_run_signal(df, col_name)
 
 
-def intersection_bool(df, left_alias, right_alias):
+def intersection_bool(df, left_alias, right_alias, col_name="intersection"):
         """
         Intersection between the join of two run (bool value) dfs
         :param df: the joined df obtained from join_bool method
@@ -168,8 +198,8 @@ def intersection_bool(df, left_alias, right_alias):
 
         udf_find_intersection = func.udf(lambda left_val, right_val: find_intersection(left_val, right_val), DoubleType())
 
-        df = df.withColumn("intersection", udf_find_intersection(get_value_col(left_alias), get_value_col(right_alias)))
-        return to_skyspark_run_signal(df, "intersection")
+        df = df.withColumn(col_name, udf_find_intersection(get_value_col(left_alias), get_value_col(right_alias)))
+        return to_skyspark_run_signal(df, col_name)
 
 
 def to_skyspark_run_signal(df, check_col):

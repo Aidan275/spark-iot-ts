@@ -56,7 +56,7 @@ class IOTHistoryReader(Reader):
         # self._metadata_df.cache()
         self._metadata_df.createOrReplaceTempView("metadata")
 
-    def metadata(self, metadata):
+    def metadata(self, metadata, key_col="dis"):
         """
         builder that initializes meta tags to be filtered.
         :param metadata: tags to be filtered like "supply and water and temp and sensor"
@@ -66,9 +66,10 @@ class IOTHistoryReader(Reader):
         cols = sql[1]
         sql = sql[0]
         self.check_valid_column(cols, self._metadata_df)
-        tag_query = " select dis from metadata where dis IS NOT NULL and " + sql
+        tag_query = " select " + key_col + " from metadata where " + key_col + " IS NOT NULL and " + sql
         if self._rule_on is not None:
             tag_query += " and " + self._rule_on
+        # print(tag_query)
         rows = self._sqlContext.sql(tag_query).collect()
         point_names = []
 

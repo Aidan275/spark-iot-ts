@@ -24,7 +24,7 @@ Some of the features of this project are:
 6. [Zeppelin Notebook](#zeppelin-notebook)
 7. [Superset](#superset)
 
-### 1. Apache Spark
+### Apache Spark
 [Apache Spark](https://spark.apache.org/) along with [FiloDB](https://github.com/filodb/FiloDB) library and
  [Flint ts](https://github.com/twosigma/flint) library is the core of this project.
 
@@ -45,30 +45,30 @@ Some of the features of this project are:
  - https://github.com/itsmeccr/FiloDB (Branch: v0.4_spark2)
  - https://github.com/itsmeccr/flint
 
-### 2. Apache Cassandra
+### Apache Cassandra
 > The Apache Cassandra database is the right choice when you need scalability and high availability without compromising performance. Linear scalability and proven fault-tolerance on commodity hardware or cloud infrastructure make it the perfect platform for mission-critical data.Cassandra's support for replicating across multiple datacenters is best-in-class, providing lower latency for your users and the peace of mind of knowing that you can survive regional outages.
 
 [Apache Cassandra](https://cassandra.apache.org/) is used as data storage (IOT histories) by FiloDB.
 
-### 3. Elasticsearch
+### Elasticsearch
 > Elasticsearch is a distributed RESTful search engine built for the cloud.
 [Elasticsearch](https://github.com/elastic/elasticsearch) is used for storing and querying IOT metadata in [project-haystack](https://project-haystack.org/) format.
 
-### 4. Apache Kafka
+### Apache Kafka
 > Kafka® is used for building real-time data pipelines and streaming apps. It is horizontally scalable, fault-tolerant, wicked fast, and runs in production in thousands of companies.
 
 [Apache Kafka](https://kafka.apache.org/) is used as buffer in streaming uses cases.
 
-### 5. Spark Thrift Server
+### Spark Thrift Server
 Spark Thrift Server comes in Apache spark distribution and can be used to expose spark dataframes as SQL tables.
 It is used to connect histories in FiloDB and metadata in elasticsearch with visualization tools and other applications using JDBC.
 
-### 6. Zeppelin Notebook
+### Zeppelin Notebook
 > Web-based notebook that enables data-driven, interactive data analytics and collaborative documents with SQL, Scala and more.
 
 [Apache Zeppelin](https://zeppelin.apache.org) is used to write business logic and rules and perform other data analytics.
 
-### 7. Superset
+### Superset
 > Apache Superset (incubating) is a modern, enterprise-ready business intelligence web application
 
 [Apache Superset](https://github.com/apache/incubator-superset) is used as visualization tool by connecting with Spark thrift server.

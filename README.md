@@ -1,5 +1,5 @@
 # spark-iot-ts
-A timeseries library using apache spark, filodb and flint ts library for reading the iot data in project haystack format and processing it.
+A platform for IOT timeseries analytics using Apache Spark, FiloDB and Flint ts library
 
 ## Features of this project
 Some of the features of this project are:
@@ -13,10 +13,14 @@ Some of the features of this project are:
 
 
 ## Technology Stack
-1. Apache Spark
+1. [Apache Spark](#apache-spark)
 2. FiloDB (and Apache Cassandra)
 3. Zeppelin Notebook / Jupyter Notebook
 4. Spark Thrift Server (mysql as hive metastore)
 5. Elasticsearch
+
+### 1. Apache Spark
+
+
 
 

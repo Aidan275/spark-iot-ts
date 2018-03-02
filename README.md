@@ -219,7 +219,7 @@ metadata has two arguments: points filter in haystack format and the field of me
 history takes a tuple with two python datetime.datetime elements
 i.e this_month() = (datetime.datetime(2018, 2, 1, 0, 0), datetime.datetime(2018, 2, 28, 23, 59, 59, 999999)) for Feb 2018
 
-The query may returned multiple points as well
+The query may return multiple points as well
 ```
 merged_his_1 = his_reader.metadata("his and point and cur", key_col="id").history(this_month()).read()
 ```

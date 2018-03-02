@@ -149,11 +149,16 @@ Example 2 (Points Metadata):
 
 ### Histories Schema
 Following are the fields for history data.
+
 timestamp, datetime, pointName and value are the timeseries data.
 
 siteRef and yearMonth are for partition.
 
 siteRef and equipName generally will be used as joining keys to get different points of same equipment.
+
+For a partition, the data will be sorted by time which is main advantage of using FiloDB for timeseries analytics.
+
+
 ```
  |-- pointName: string (nullable = false)
  |-- timestamp: timestamp (nullable = false)
@@ -178,5 +183,52 @@ Sample Data:
 |S.site.hayTest.Bool1|2018-02-02 00:20:...|1517530824000000000|S.site.hayTest| S.site|    |  2018-02|  0.0|
 +--------------------+--------------------+-------------------+--------------+-------+----+---------+-----+
 ```
+
+## Examples
+
+### Initializing reader
+
+```
+from au.com.gegroup.ts.iot_his_reader import IOTHistoryReader
+his_reader = IOTHistoryReader(sqlContext, dataset="niagara4_history_v1", view_name="niagara4_server1_his", rule_on="equipRef == @S.site.hayTest", site_filter="siteRef == @S.site")
+```
+- dataset -> name of FiloDB history dataset
+- view_name -> temporary view created by Apache Spark SQL
+- rule_on -> equipment level filter in haystack format
+- site_filter -> site level filter in haystack format
+
+### Accessing history as Spark dataframe
+
+```
+his_reader.get_df().show()
+```
+
+### Accessing metadata as Spark dataframe
+
+```
+his_reader.get_metadata_df().show()
+```
+
+### Reading point using metadata and history range
+
+```
+boolHis = reader.metadata('his and point and id == @S.site.hayTest.Bool1', key_col="id").history(this_month()).read()
+```
+metadata has two arguments: points filter in haystack format and the field of metadata that should be matched with pointName/id of history
+
+history takes a tuple with two python datetime.datetime elements
+i.e this_month() = (datetime.datetime(2018, 2, 1, 0, 0), datetime.datetime(2018, 2, 28, 23, 59, 59, 999999)) for Feb 2018
+
+The query may returned multiple points as well
+```
+merged_his_1 = his_reader.metadata("his and point and cur", key_col="id").history(this_month()).read()
+```
+
+The read operation can be done by sending either metadata query or history range or both. This means at least one of metadata query or history range must be present.
+
+```
+num1His = his_reader.metadata('his and point and id == @S.site.hayTest.Num1', key_col="id").read()
+```
+
 
 

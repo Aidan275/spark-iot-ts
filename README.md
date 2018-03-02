@@ -150,7 +150,9 @@ Example 2 (Points Metadata):
 ### Histories Schema
 Following are the fields for history data.
 timestamp, datetime, pointName and value are the timeseries data.
-siteRef and yearMonth is for partition.
+
+siteRef and yearMonth are for partition.
+
 siteRef and equipName generally will be used as joining keys to get different points of same equipment.
 ```
  |-- pointName: string (nullable = false)

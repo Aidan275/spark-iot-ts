@@ -14,21 +14,22 @@ class IOTHistoryReader(Reader):
     Load filter is None by default.
     """
 
-    def __init__(self, sqlContext, dataset, view_name, rule_on=None, site_filter=None):
+    def __init__(self, sqlContext, dataset, view_name, rule_on=None, site_filter=None, **kwargs):
         """
         constructor for Reader object to read from filodb
         :param sqlContext: current spark's sqlContext
         :param dataset: the filodb dataset name or dataframe that should be loaded
         :param view_name: the name to temp table, that will be used in constructed queries
-        :param site_filter: haystack format filter string of equipment level. Eg: 'equip and boiler'
+        :param rule_on: haystack format filter string of equipment level. Eg: 'equip and boiler'
         :param site_filter: haystack format filter string of site level. Directly applied to history. Eg: 'siteRef == "Site"'
+        :param config_options: a dict with configuration options like meta.es.nodes, meta.es.port, meta.es.resource, etc
         :return: Reader object
         """
         self.to_sql_parser = HaystackToSQL()
         if site_filter is not None:
             site_filter = self.to_sql_parser.parse(site_filter)[0]
         super().__init__(sqlContext, dataset, view_name, site_filter)
-        self._set_metadata()
+        self._set_metadata(**kwargs)
         self._rule_on = None
         self.handle_rule_on(rule_on)
 
@@ -51,8 +52,8 @@ class IOTHistoryReader(Reader):
                 print("Rule on didn't match with any records..")
                 # print(self._rule_on)
 
-    def _set_metadata(self):
-        self._metadata_df = ESMetadata.getInstance(self._sqlContext)
+    def _set_metadata(self, **kwargs):
+        self._metadata_df = ESMetadata.getInstance(self._sqlContext, **kwargs)
         # self._metadata_df.cache()
         self._metadata_df.createOrReplaceTempView("metadata")
 

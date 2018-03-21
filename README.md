@@ -36,7 +36,7 @@ Some of the features of this project are:
 
  Flint ts library supports temporal (preserving sorting by time) joins, merges and other timeseries related operations like group by cycles (same timestamp), group by intervals, time based windows, etc.
 
- > FiloDB is a new open-source distributed, versioned, and columnar analytical database designed for modern streaming workloads.
+> FiloDB is a new open-source distributed, versioned, and columnar analytical database designed for modern streaming workloads.
 
  FiloDB uses Apache Cassandra as data storage and built around Apache Spark framework. There is flexibility of data partitioning, sorting while storing, fast read/write and versioned data storage which is optimized for timeseries and events data.
 
@@ -188,14 +188,34 @@ Sample Data:
 
 ### Initializing reader
 
+#### Configuration Options (Optional)
+`meta.es.nodes` -> The host address of elasticsearch installation for metadata. Default: `localhost`
+`meta.es.port` -> The port of elasticsearch installation for metadata. Default: `9200`
+`meta.es.resource` -> The resource (index/type) of elasticsearch to read metadata from. Default: `metadata/metadata`
+`meta.es.refresh` -> Should the elasticsearch metadata be refreshed on new `IOTHistoryReader` object creation? Default: `false`
+
+
+> Elasticsearch config can also be set by following environment variables:
+- `META_ES_NODES`
+- `META_ES_PORT`
+- `META_ES_RESOURCE`
+
+
 ```
 from au.com.gegroup.ts.iot_his_reader import IOTHistoryReader
-his_reader = IOTHistoryReader(sqlContext, dataset="niagara4_history_v1", view_name="niagara4_server1_his", rule_on="equipRef == @S.site.hayTest", site_filter="siteRef == @S.site")
+es_options = {
+ "meta.es.nodes":"localhost",
+ "meta.es.port":"9202",
+ "meta.es.resource":"niagara4_metadata_v2/metadata",
+ "meta.es.refresh":"true"
+}
+his_reader = IOTHistoryReader(sqlContext, dataset="niagara4_history_v1", view_name="niagara4_server1_his", rule_on="equipRef == @S.site.hayTest", site_filter="siteRef == @S.site", **es_options)
 ```
 - dataset -> name of FiloDB history dataset
 - view_name -> temporary view created by Apache Spark SQL
 - rule_on -> equipment level filter in haystack format
 - site_filter -> site level filter in haystack format
+- es_options -> kwargs containing configuration options
 
 ### Accessing history as Spark dataframe
 

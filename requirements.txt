@@ -3,3 +3,5 @@ pandas
 ts
 parsimonious
 haystack
+pyhaystack
+kafka

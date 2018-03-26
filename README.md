@@ -189,10 +189,10 @@ Sample Data:
 ### Initializing reader
 
 #### Configuration Options (Optional)
-`meta.es.nodes` -> The host address of elasticsearch installation for metadata. Default: `localhost`
-`meta.es.port` -> The port of elasticsearch installation for metadata. Default: `9200`
-`meta.es.resource` -> The resource (index/type) of elasticsearch to read metadata from. Default: `metadata/metadata`
-`meta.es.refresh` -> Should the elasticsearch metadata be refreshed on new `IOTHistoryReader` object creation? Default: `false`
+- `meta.es.nodes` -> The host address of elasticsearch installation for metadata. Default: `localhost`
+- `meta.es.port` -> The port of elasticsearch installation for metadata. Default: `9200`
+- `meta.es.resource` -> The resource (index/type) of elasticsearch to read metadata from. Default: `metadata/metadata`
+- `meta.es.refresh` -> Should the elasticsearch metadata be refreshed on new `IOTHistoryReader` object creation? Default: `false`
 
 
 > Elasticsearch config can also be set by following environment variables:
@@ -211,11 +211,12 @@ es_options = {
 }
 his_reader = IOTHistoryReader(sqlContext, dataset="niagara4_history_v1", view_name="niagara4_server1_his", rule_on="equipRef == @S.site.hayTest", site_filter="siteRef == @S.site", **es_options)
 ```
-- dataset -> name of FiloDB history dataset
-- view_name -> temporary view created by Apache Spark SQL
-- rule_on -> equipment level filter in haystack format
-- site_filter -> site level filter in haystack format
-- es_options -> kwargs containing configuration options
+
+- `dataset` -> name of FiloDB history dataset
+- `view_name` -> temporary view created by Apache Spark SQL
+- `rule_on` -> equipment level filter in haystack format
+- `site_filter` -> site level filter in haystack format
+- `**es_options` -> kwargs containing configuration options
 
 ### Accessing history as Spark dataframe
 
@@ -232,6 +233,7 @@ his_reader.get_metadata_df().show()
 ### Reading point using metadata and history range
 
 ```
+from au.com.gegroup.ts.datetime.utils import *
 boolHis = reader.metadata('his and point and id == @S.site.hayTest.Bool1', key_col="id").history(this_month()).read()
 ```
 metadata has two arguments: points filter in haystack format and the field of metadata that should be matched with pointName/id of history
@@ -241,7 +243,7 @@ i.e this_month() = (datetime.datetime(2018, 2, 1, 0, 0), datetime.datetime(2018,
 
 The query may return multiple points as well
 ```
-merged_his_1 = his_reader.metadata("his and point and cur", key_col="id").history(this_month()).read()
+histories = his_reader.metadata("his and point and cur", key_col="id").history(this_month()).read()
 ```
 
 The read operation can be done by sending either metadata query or history range or both. This means at least one of metadata query or history range must be present.
@@ -250,5 +252,127 @@ The read operation can be done by sending either metadata query or history range
 num1His = his_reader.metadata('his and point and id == @S.site.hayTest.Num1', key_col="id").read()
 ```
 
+### Using Apache Spark and Flint Ts Library for timeseries operations
 
+**1) Aggregating on whole history**
+```
+his_reader.get_df().select(func.min("timestamp").alias("min_date"), func.max("timestamp").alias("max_date")).show()
++--------------------+--------------------+
+|            min_date|            max_date|
++--------------------+--------------------+
+|2018-02-02 00:19:...|2018-03-25 21:50:...|
++--------------------+--------------------+
+```
 
+**2) Joining timeseries dataframes (Temporal Joins)**
+```
+num1His = reader.metadata('his and point and id == @S.site.hayTest.Num1', key_col="id").history(this_month()).read()
+boolHis = reader.metadata('his and point and id == @S.site.hayTest.Bool1', key_col="id").history(this_month()).read()
+
+joinedHis = num1His.leftJoin(boolHis, tolerance="1 days", key =["siteRef", "equipName"], right_alias="bool1")
+```
+
+**3) Merging timeseries dataframes (with same schema) preserving sorting by time**
+```
+num1His = reader.metadata('his and point and id == @S.site.hayTest.Num1', key_col="id").history(this_month()).read()
+num2His = reader.metadata('his and point and id == @S.site.hayTest.Num2', key_col="id").history(this_month()).read()
+
+mergedHis = num1His.merge(num2His)
+
+```
+
+**4) Time window based summarizers**
+```
+# Showing variance of value in past 1 day using summarizeWindows
+
+from   ts.flint              import summarizers, windows, clocks
+
+variance_df = histories.summarizeWindows(windows.past_absolute_time("1days"),
+summarizer=summarizers.variance("value"),
+key=["siteRef","equipName","pointName"])
+
+variance_df.where("pointName != 'S.site.hayTest.Bool1'").show()
+
++-------------------+--------------------+-------+-------------------+-------+--------------+--------------------+
+|               time|           timestamp|  value|          pointName|siteRef|     equipName|      value_variance|
++-------------------+--------------------+-------+-------------------+-------+--------------+--------------------+
+|1520563500017999872|2018-03-09 02:45:...|50.3811|S.site.hayTest.Num2| S.site|S.site.hayTest|                 NaN|
+|1520564400012999936|2018-03-09 03:00:...|50.6379|S.site.hayTest.Num2| S.site|S.site.hayTest| 0.03297311999999958|
+|1520565300008000000|2018-03-09 03:15:...|50.7815|S.site.hayTest.Num2| S.site|S.site.hayTest| 0.04114789333333285|
+|1520566200001999872|2018-03-09 03:30:...|50.6191|S.site.hayTest.Num2| S.site|S.site.hayTest|0.027521546666666372|
+|1520567100028000000|2018-03-09 03:45:...|50.0814|S.site.hayTest.Num2| S.site|S.site.hayTest| 0.07545160999999947|
+|1520568000007000064|2018-03-09 04:00:...|50.9536|S.site.hayTest.Num2| S.site|S.site.hayTest| 0.09462321466666548|
++-------------------+--------------------+-------+-------------------+-------+--------------+--------------------+
+```
+
+**5) Time window based custom UDF**
+```
+# Calculating moving average for past 2 days
+
+from pyspark.sql.types import DoubleType
+import pyspark.sql.functions as func
+
+def movingAverage(window):
+    nrows = len(window)
+    if nrows == 0:
+        return 0
+    return sum(row.value for row in window) / nrows
+
+movingAverageUdf = func.udf(lambda window: movingAverage(window), DoubleType())
+
+df = histories.addWindows(windows.past_absolute_time("2days"), key=["siteRef","equipName","pointName"])
+movAvg_df = df.withColumn('movingAverage', movingAverageUdf(func.col("window_past_2days"))).drop("window_past_2days")
+movAvg_df.where("movingAverage > 0").show()
+
++-------------------+--------------------+-------+-------------------+-------+--------------+------------------+
+|               time|           timestamp|  value|          pointName|siteRef|     equipName|     movingAverage|
++-------------------+--------------------+-------+-------------------+-------+--------------+------------------+
+|1520563500017999872|2018-03-09 02:45:...|50.3811|S.site.hayTest.Num2| S.site|S.site.hayTest|           50.3811|
+|1520564400012999936|2018-03-09 03:00:...|50.6379|S.site.hayTest.Num2| S.site|S.site.hayTest|           50.5095|
+|1520565300008000000|2018-03-09 03:15:...|50.7815|S.site.hayTest.Num2| S.site|S.site.hayTest| 50.60016666666667|
+|1520566200001999872|2018-03-09 03:30:...|50.6191|S.site.hayTest.Num2| S.site|S.site.hayTest|           50.6049|
+|1520567100028000000|2018-03-09 03:45:...|50.0814|S.site.hayTest.Num2| S.site|S.site.hayTest|           50.5002|
+|1520568000007000064|2018-03-09 04:00:...|50.9536|S.site.hayTest.Num2| S.site|S.site.hayTest|50.575766666666674|
+|1520568900016999936|2018-03-09 04:15:...|50.4218|S.site.hayTest.Num2| S.site|S.site.hayTest| 50.55377142857144|
+|1520569800011000064|2018-03-09 04:30:...| 50.213|S.site.hayTest.Num2| S.site|S.site.hayTest| 50.51117500000001|
+|1520570700011000064|2018-03-09 04:45:...|50.2189|S.site.hayTest.Num2| S.site|S.site.hayTest| 50.47870000000001|
++-------------------+--------------------+-------+-------------------+-------+--------------+------------------+
+```
+
+**6) Summarizing dataframes**
+```
+summarized_stddev_df = movAvg_df.summarize(summarizers.stddev('value'), key=["siteRef", "equipName", "pointName"])
+summarized_stddev_df.show()
+
++----+-------+--------------+--------------------+-------------------+
+|time|siteRef|     equipName|           pointName|       value_stddev|
++----+-------+--------------+--------------------+-------------------+
+|   0| S.site|S.site.hayTest|S.site.hayTest.Bool1|                0.0|
+|   0| S.site|S.site.hayTest| S.site.hayTest.Num2|0.28202272739583134|
+|   0| S.site|S.site.hayTest| S.site.hayTest.Num1|0.28505566501478885|
++----+-------+--------------+--------------------+-------------------+
+```
+
+**7) Rolling up histories (Summarizing by intervals)**
+```
+from au.com.gegroup.ts.spark.utils import *
+min_max = histories.select(func.min("timestamp").alias("min"), func.max("timestamp").alias("max")).collect()
+
+clock = clocks.uniform(sqlContext, frequency="1day", offset="0ns", begin_date_time=str(min_max[0][0].date()),
+ end_date_time=str(min_max[0][1].date()), time_zone='GMT')
+
+dailyAvg_df = histories.summarizeIntervals(clock, summarizers.mean("value"), key=["siteRef", "equipName", "pointName"])
+dailyAvg_df = get_timestamp_col(dailyAvg_df, "timestamp", tz="GMT")
+dailyAvg_df.show()
++-------------------+-------+--------------+--------------------+------------------+--------------------+
+|               time|siteRef|     equipName|           pointName|        value_mean|           timestamp|
++-------------------+-------+--------------+--------------------+------------------+--------------------+
+|1520553600000000000| S.site|S.site.hayTest|S.site.hayTest.Bool1|               0.0|2018-03-09 00:00:...|
+|1520553600000000000| S.site|S.site.hayTest| S.site.hayTest.Num2|50.553811764705884|2018-03-09 00:00:...|
+|1520640000000000000| S.site|S.site.hayTest| S.site.hayTest.Num2|        50.4913375|2018-03-10 00:00:...|
+|1520640000000000000| S.site|S.site.hayTest|S.site.hayTest.Bool1|               0.0|2018-03-10 00:00:...|
+|1520726400000000000| S.site|S.site.hayTest| S.site.hayTest.Num2|      50.509790625|2018-03-11 00:00:...|
+|1520726400000000000| S.site|S.site.hayTest|S.site.hayTest.Bool1|               0.0|2018-03-11 00:00:...|
++-------------------+-------+--------------+--------------------+------------------+--------------------+
+
+```

@@ -28,20 +28,6 @@ bulk_kwargs = {
 }
 
 
-def index_in_es(rows):
-    metadata_actions = []
-    es_type = "metadata"
-    for row in rows:
-        es_id = row["id"]
-        doc = {}
-        row['_index'] = es_index
-        row['_type'] = es_type
-        row['_id'] = es_id
-        metadata_actions.append(row)
-    bulk(es, metadata_actions, **bulk_kwargs)
-
-import json
-
 class HaystackJsonResponse:
     """
     """
@@ -62,6 +48,7 @@ class HaystackJsonResponse:
 
 response = HaystackJsonResponse()
 
+
 def map_json_ref_to_haystack(value):
     if value is None:
         return value
@@ -79,10 +66,27 @@ def map_json_ref_to_haystack(value):
             return actual_value
     raise Exception("Not an Reference Exception. Haystack Json reference format is `r:<id> [dis]`")
 
+
+def index_in_es(rows):
+    metadata_actions = []
+    es_type="metadata"
+    for row in rows:
+        es_id = row["id"]
+        row['_index'] = es_index
+        row['_type'] = es_type
+        row['_id'] = es_id
+        row["raw_id"] = es_id
+        row["id"] = map_json_ref_to_haystack(es_id)[1:]
+        metadata_actions.append(row)
+    bulk(es, metadata_actions, **bulk_kwargs)
+
+import json
+
+
 # inserting site metadata
 session._get('read?filter=site', response.callback, http_args)
-rows = response.rows
-index_in_es(rows)
+site_rows = response.rows
+index_in_es(site_rows)
 
 # inserting equip metadata
 session._get('read?filter=equip', response.callback, http_args)

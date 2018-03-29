@@ -9,7 +9,13 @@ curl -XPUT ${1}:${2}/_template/metadata_template -H "Content-Type:application/js
           "everything_as_keywords": {
             "match_mapping_type": "*",
             "mapping": {
-              "type": "keyword"
+              "type": "text",
+              "fields": {
+                "raw": {
+                  "type":  "keyword",
+                  "ignore_above": 256
+                }
+              }
             }
           }
         }

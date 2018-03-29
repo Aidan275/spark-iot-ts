@@ -13,12 +13,13 @@ __author__ = 'topsykretts'
 
 def getSparkSessionInstance(sparkConf):
     if 'sparkSessionSingletonInstance' not in globals():
-        globals()['sparkSessionSingletonInstance'] = SparkSession\
-            .builder\
-            .config(conf=sparkConf)\
+        globals()['sparkSessionSingletonInstance'] = SparkSession \
+            .builder \
+            .config(conf=sparkConf) \
             .enableHiveSupport() \
             .getOrCreate()
     return globals()['sparkSessionSingletonInstance']
+
 
 # todo configure as cmd line options or config file
 
@@ -31,6 +32,9 @@ es_nodes = "localhost"
 es_port = "9200"
 
 dataset = "niagara4_history_scp_v1"
+
+default_site = "PH_site"
+default_equipRef = "PH_equip"
 
 
 def createContextFunction():
@@ -48,7 +52,6 @@ def createContextFunction():
     kafkaStream.foreachRDD(lambda rdd: process_rdd(rdd))
     ssc.checkpoint(checkpoint_dir)
     return ssc
-
 
 
 def convert_to_timestamp(date_string):
@@ -89,8 +92,10 @@ def process_rdd(rdd):
             .option("es.nodes", es_nodes) \
             .option("es.port", es_port) \
             .load()
+
         points.cache()
         points.registerTempTable("points")
+
         joinedDF = spark_session.sql("SELECT * from streamDF as h left join points as p on h.pointName = p.id")
 
         from pyspark.sql.functions import udf, col, lit
@@ -121,6 +126,18 @@ def process_rdd(rdd):
         final_df = final_df.select("timestamp", "datetime", "yearMonth", "pointName", "siteRef", "equipRef", "value",
                                    "unit")
         final_df = final_df.withColumnRenamed("equipRef", "equipName")
+
+        def fill_null_value(value, filler):
+            if value is None:
+                return filler
+            else:
+                return value
+
+        fill_null_value_udf = udf(lambda value, filler: fill_null_value(value, filler))
+
+        final_df = final_df.withColumn("siteRef", fill_null_value_udf(col("siteRef"), lit(default_site)))
+        final_df = final_df.withColumn("equipName", fill_null_value_udf(col("equipName"), lit(default_equipRef)))
+
         final_df.show()
         # final_df.printSchema()
 
@@ -131,6 +148,7 @@ def process_rdd(rdd):
             .option("chunk_size", "500") \
             .mode("append") \
             .save()
+
 
 ssc = StreamingContext.getOrCreate(checkpoint_dir, createContextFunction)
 ssc.start()

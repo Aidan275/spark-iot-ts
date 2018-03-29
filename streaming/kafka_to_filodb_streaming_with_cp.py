@@ -20,9 +20,18 @@ def getSparkSessionInstance(sparkConf):
             .getOrCreate()
     return globals()['sparkSessionSingletonInstance']
 
-kafka_topics = ["niagara_iot_s1"]
+# todo configure as cmd line options or config file
+
+kafka_topics = ["niagara_iot_scp_v2"]
 kafka_params = {"metadata.broker.list": "localhost:9092", "auto.offset.reset": "smallest"}
 checkpoint_dir = kafka_topics[0] + "_checkpoint"
+
+es_path = "niagara4_metadata_scp_json_v1/metadata"
+es_nodes = "localhost"
+es_port = "9200"
+
+dataset = "niagara4_history_scp_v1"
+
 
 def createContextFunction():
     """
@@ -75,7 +84,11 @@ def process_rdd(rdd):
         row_rdd = rdd.map(lambda value: clean_data(value[1]))
         streamDF = spark_session.createDataFrame(row_rdd, get_schema())
         streamDF.createOrReplaceTempView("streamDF")
-        points = spark_session.read.format("org.elasticsearch.spark.sql").option("path", "niagara4_metadata_server1/metadata").load()
+        points = spark_session.read.format("org.elasticsearch.spark.sql") \
+            .option("path", es_path) \
+            .option("es.nodes", es_nodes) \
+            .option("es.port", es_port) \
+            .load()
         points.cache()
         points.registerTempTable("points")
         joinedDF = spark_session.sql("SELECT * from streamDF as h left join points as p on h.pointName = p.id")
@@ -108,7 +121,6 @@ def process_rdd(rdd):
         final_df.show()
         # final_df.printSchema()
 
-        dataset = "niagara4_history_v2"
         final_df.write.format("filodb.spark") \
             .option("dataset", dataset) \
             .option("partition_keys", "siteRef,yearMonth") \

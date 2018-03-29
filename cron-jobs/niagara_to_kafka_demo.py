@@ -6,7 +6,7 @@ __author__ = 'topsykretts'
 # server credentials
 
 server_lookup = {
-    "niagara_iot_s1": {
+    "niagara_iot_scp_v2": {
         "implementation": "n4",
         "uri": "http://your_server:port",
         "username": "your_username",
@@ -18,7 +18,8 @@ import pyhaystack
 import hszinc
 
 # get session
-server_name = 'niagara_iot_s1'
+server_name = 'niagara_iot_scp_v2'
+query = 'his and point and kind!="Str"'
 session = pyhaystack.connect(**server_lookup[server_name])
 
 
@@ -38,10 +39,18 @@ def get_histories(point_id, rng):
 
 
 def get_points():
-    points_op = session.find_entity("his and cur and point")
+    points_op = session.find_entity(query)
     points_op.wait()
     points = points_op.result
     return points.keys()
+
+
+def get_tz():
+    about_op = session.about()
+    about_op.wait()
+    res = about_op.result
+    return {"tz": res[0]["serverTime"].tzinfo, "name":  res[0]["tz"]}
+
 
 # kafka producer initialization
 from kafka import KafkaProducer
@@ -59,14 +68,13 @@ producer = KafkaProducer(**kafka_configs)
 
 # determining range to read histories
 import datetime
-import pytz
 
-tz = pytz.utc
+tz = get_tz()
 
 to_zinc_dt = lambda dt: "%s.%s%s" % (
     dt.strftime('%Y-%m-%dT%H:%M:%S'),
     '{:03.0f}'.format(dt.microsecond / 1000.0),
-    dt.strftime('%z %Z')[:3] + ":" + dt.strftime('%z %Z')[3:]
+    dt.strftime('%z %Z')[:3] + ":" + dt.strftime('%z %Z')[3:5] + " " + tz["name"]
 )
 # start = to_zinc_dt(tz.localize(datetime.datetime(2018, 2, 1, 0, 0)))
 start = None
@@ -86,8 +94,8 @@ except FileNotFoundError:
     start = None
 
 if start is None:
-    start = "2018-02-01T00:00:00.000+00:00 UTC"
-actual_now = datetime.datetime.now(tz=tz)
+    start = to_zinc_dt(datetime.datetime.strptime("2017-01-01T00:00:00", "%Y-%m-%dT%H:%M:%S").replace(tzinfo=tz["tz"]))
+actual_now = datetime.datetime.now(tz=tz["tz"])
 record_now = to_zinc_dt(actual_now - datetime.timedelta(minutes=1))
 now = to_zinc_dt(actual_now)
 
@@ -118,7 +126,7 @@ for point_id in get_points():
             else:
                 row_data["val"] = value
             row_data["pointName"] = point_id
-            print(json.dumps(row_data))
+            # print(json.dumps(row_data))
             producer.send(server_name, json.dumps(row_data)).get()
         producer.flush()
 # there is a delay from niagara server to give histories

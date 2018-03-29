@@ -102,7 +102,10 @@ def process_rdd(rdd):
                 else:
                     return 0.0
             else:
-                return float(value.replace(unit, "").strip())
+                if unit is not None:
+                    return float(value.replace(unit, "").strip())
+                else:
+                    return float(value)
 
         clean_udf = udf(lambda value, unit, kind: clean_raw_value(value, unit, kind), DoubleType())
         if "unit" not in joinedDF.columns:

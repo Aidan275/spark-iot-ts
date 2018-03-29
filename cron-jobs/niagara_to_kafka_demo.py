@@ -11,7 +11,7 @@ server_lookup = {
         "uri": "http://your_server:port",
         "username": "your_username",
         "password": "your_pass",
-        "pint": True
+        "pint": False
     }
 }
 import pyhaystack
@@ -94,7 +94,7 @@ except FileNotFoundError:
     start = None
 
 if start is None:
-    start = to_zinc_dt(datetime.datetime.strptime("2017-01-01T00:00:00", "%Y-%m-%dT%H:%M:%S").replace(tzinfo=tz["tz"]))
+    start = to_zinc_dt(datetime.datetime.strptime("2018-03-28T00:00:00", "%Y-%m-%dT%H:%M:%S").replace(tzinfo=tz["tz"]))
 actual_now = datetime.datetime.now(tz=tz["tz"])
 record_now = to_zinc_dt(actual_now - datetime.timedelta(minutes=1))
 now = to_zinc_dt(actual_now)
@@ -124,10 +124,10 @@ for point_id in get_points():
                     val = False
                 row_data["val"] = val
             else:
-                row_data["val"] = value
+                row_data["val"] = str(value)
             row_data["pointName"] = point_id
-            # print(json.dumps(row_data))
-            producer.send(server_name, json.dumps(row_data)).get()
+            # print(json.dumps(row_data, ensure_ascii=False))
+            producer.send(server_name, json.dumps(row_data, ensure_ascii=False)).get()
         producer.flush()
 # there is a delay from niagara server to give histories
 rng_file_write.write(record_now)

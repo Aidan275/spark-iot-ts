@@ -1,6 +1,6 @@
 import numpy
 from pyhaystack.exception import HaystackError
-
+from pyhaystack.client.ops.his import MetaSeries
 __author__ = 'topsykretts'
 
 # server credentials
@@ -113,7 +113,7 @@ for point_id in get_points():
         points_his = None
 
     import json
-    if points_his is not None:
+    if points_his is not None and isinstance(points_his, MetaSeries):
         print("Sending ", point_id, " Records to Kafka")
         for index, value in points_his.iteritems():
             row_data = {"ts": str(index)}

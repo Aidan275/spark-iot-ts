@@ -24,22 +24,23 @@ class HaystackParsingTest(BaseTestCase):
         """
         tag_haystack_query = "supply and air and temp and sensor"
         tag_sql_result = self.parser.parse(tag_haystack_query)[0]
-        assert "supply = 1 and air = 1 and temp = 1 and sensor = 1" == tag_sql_result
+        print(tag_sql_result)
+        assert "supply = 'm:' and air = 'm:' and temp = 'm:' and sensor = 'm:'" == tag_sql_result
 
     def test_parsing_markers_with_parens_and_not(self):
         tag_haystack_query = "supply and (air or pressure) and temp and not sensor"
         tag_sql_result = self.parser.parse(tag_haystack_query)[0]
-        assert "supply = 1 and ( air = 1 or pressure = 1 ) and temp = 1 and sensor != 1" == tag_sql_result
+        assert "supply = 'm:' and ( air = 'm:' or pressure = 'm:' ) and temp = 'm:' and sensor != 'm:'" == tag_sql_result
 
     def test_parsing_tag_and_non_tag_query(self):
         haystack_query = "return and water and temp and not sensor and equipRef==\"equip123\""
         sql_result = self.parser.parse(haystack_query)[0]
-        assert "return = 1 and water = 1 and temp = 1 and sensor != 1 and equipRef = 'equip123'" == sql_result
+        assert "return = 'm:' and water = 'm:' and temp = 'm:' and sensor != 'm:' and equipRef = 'equip123'" == sql_result
 
     def test_nested_parenthesis(self):
         haystack_query = '(return and (temp or otherVal == "abc" )) or (supply and pressure)'
         sql_result = self.parser.parse(haystack_query)[0]
-        assert "( return = 1 and ( temp = 1 or otherVal = 'abc' ) ) or ( supply = 1 and pressure = 1 )" == \
+        assert "( return = 'm:' and ( temp = 'm:' or otherVal = 'abc' ) ) or ( supply = 'm:' and pressure = 'm:' )" == \
                sql_result
 
     def test_non_tag_only(self):
@@ -64,13 +65,14 @@ class HaystackParsingTest(BaseTestCase):
         haystack_query = 'siteRef == @a12345fD'
         sql_result = self.parser.parse(haystack_query)
         print(sql_result[0])
-        assert "siteRef = 'a12345fD'" == sql_result[0]
+        assert "siteRef = 'r:a12345fD' or siteRef LIKE 'r:a12345fD %'" == sql_result[0]
 
     def test_ref_with_desc(self):
-        haystack_query = 'boilerPlantRef == @12345f-67890D "56 Pitt St Boiler Plant"'
+        haystack_query = '(boilerPlantRef == @12345f-67890D "56 Pitt St Boiler Plant") and (air or water)'
         sql_result = self.parser.parse(haystack_query)
         print(sql_result[0])
-        assert "boilerPlantRef = '12345f-67890D'"
+        assert "( boilerPlantRef = 'r:12345f-67890D' or" \
+               " boilerPlantRef LIKE 'r:12345f-67890D %' ) and ( air = 'm:' or water = 'm:' )" == sql_result[0]
 
     def test_nested_ref(self):
         haystack_query = '(equipRef->boiler and equipRef->capacity == 100' \
@@ -78,31 +80,31 @@ class HaystackParsingTest(BaseTestCase):
         sql_result = self.parser.parse(haystack_query)
         print(sql_result[0])
         print(set(sql_result[1]))
-        assert "( water = 1 and equipRef in (select equipRef from metadata where" \
-               " boiler = 1 and capacity = 100) ) or" \
-               " ( equipRef in (select equipRef from metadata where fan = 1 and equip = 1) )" == sql_result[0]
+        assert "( water = 'm:' and equipRef in (select equipRef from metadata where" \
+               " boiler = 'm:' and capacity = 100) ) or" \
+               " ( equipRef in (select equipRef from metadata where fan = 'm:' and equip = 'm:') )" == sql_result[0]
 
     def test_nested_ref_mix(self):
         haystack_query = 'equipRef->boiler and equipRef->capacity == 100 and siteRef->boiler and siteRef->air'
         sql_result = self.parser.parse(haystack_query)
         print(sql_result[0])
         print(sql_result[1])
-        assert "siteRef in (select siteRef from metadata where boiler = 1 and air = 1) and " \
-               "equipRef in (select equipRef from metadata where boiler = 1 and capacity = 100)" == sql_result[0] or \
-               "equipRef in (select equipRef from metadata where boiler = 1 and capacity = 100) and" \
-               " siteRef in (select siteRef from metadata where boiler = 1 and air = 1)" == sql_result[0]
+        assert "siteRef in (select siteRef from metadata where boiler = 'm:' and air = 'm:') and " \
+               "equipRef in (select equipRef from metadata where boiler = 'm:' and capacity = 100)" == sql_result[0] or \
+               "equipRef in (select equipRef from metadata where boiler = 'm:' and capacity = 100) and" \
+               " siteRef in (select siteRef from metadata where boiler = 'm:' and air = 'm:')" == sql_result[0]
 
     def test_null_query(self):
         haystack_query = "air and temp and return and sensor == null"
         sql_result = self.parser.parse(haystack_query)
         print(sql_result[0])
-        assert "air = 1 and temp = 1 and return = 1 and sensor is null" == sql_result[0]
+        assert "air = 'm:' and temp = 'm:' and return = 'm:' and sensor is null" == sql_result[0]
 
     def test_not_null_query(self):
         haystack_query = "air and temp and return and sensor != null"
         sql_result = self.parser.parse(haystack_query)
         print(sql_result[0])
-        assert "air = 1 and temp = 1 and return = 1 and sensor is not null" == sql_result[0]
+        assert "air = 'm:' and temp = 'm:' and return = 'm:' and sensor is not null" == sql_result[0]
 
 
 if __name__ == '__main__':

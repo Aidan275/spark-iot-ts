@@ -19,10 +19,12 @@ def flatten(S):
 class HaystackToSQL(parsimonious.NodeVisitor):
     """
     Metadata uses Project Haystack format and structure.
+    https://project-haystack.org/doc/Json
     So, this class is used for parsing haystack style query to Spark SQL like query.
-    Markers in haystack are supposed to be stored with value "1".
     https://project-haystack.org/doc/Filters
     This work is derived from Christopher Andronikos <can@gegroup.com.au> 's project.
+
+    Generally markers and references are used in query/filter
     """
 
     def __init__(self):
@@ -110,6 +112,14 @@ class HaystackToSQL(parsimonious.NodeVisitor):
                 op = "is"
             elif op == "!=":
                 op = "is not"
+        elif len(val) > 3 and val[:3] == "'r:":
+            # handling references
+            if op == "=":
+                return path.strip()+" "+op+" "+val.strip() + " or " + path.strip() + " LIKE " + val.strip()[:-1] + " %'"
+            elif op == "!=":
+                return path.strip()+" "+op+" "+val.strip() + " or " +\
+                    path.strip() + " NOT LIKE " + val.strip()[:-1] + " %'"
+
         return path.strip()+" "+op+" "+val.strip()
 
     def visit_cmpOp(self, node, children):
@@ -167,7 +177,7 @@ class HaystackToSQL(parsimonious.NodeVisitor):
 
     def visit_has(self, node, children):
         tag = node.text.strip()
-        return tag + " = 1"
+        return tag + " = 'm:'"
 
     def visit_path(self, node, children):
         return node.text
@@ -187,13 +197,13 @@ class HaystackToSQL(parsimonious.NodeVisitor):
     def visit_missing(self, node, children):
         children = flatten(children)
         tag = children[0].strip()
-        return tag + " != 1"
+        return tag + " != 'm:'"
 
     def visit_ref(self, node, childern):
         return "'" + flatten(childern)[0] + "'"
 
     def visit_refVal(self, node, children):
-        return node.text
+        return "r:"+node.text
 
     def parse(self, text):
         self.cols = []

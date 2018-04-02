@@ -5,3 +5,4 @@ parsimonious
 haystack
 pyhaystack
 kafka
+elasticsearch

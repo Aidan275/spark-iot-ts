@@ -108,7 +108,7 @@ print("rng = ", rng)
 for point_id in get_points():
     try:
         points_his = get_histories(point_id, rng)
-    except HaystackError:
+    except:
         print("No records found for " + point_id + " in time range " + rng)
         points_his = None
 

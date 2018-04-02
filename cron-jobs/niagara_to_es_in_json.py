@@ -1,5 +1,7 @@
 __author__ = 'topsykretts'
 from pyhaystack.client.niagara import Niagara4HaystackSession
+import json
+
 # initialize a session for niagara connection
 
 http_args = {
@@ -72,15 +74,33 @@ def index_in_es(rows):
     es_type="metadata"
     for row in rows:
         es_id = row["id"]
+        trunc_id = map_json_ref_to_haystack(es_id)[1:]
         row['_index'] = es_index
         row['_type'] = es_type
-        row['_id'] = es_id
-        row["raw_id"] = es_id
-        row["id"] = map_json_ref_to_haystack(es_id)[1:]
+        row['_id'] = trunc_id
+        row["raw_id"] = trunc_id
+        # handling numeric fields
+        extra_row = {}
+        for field in row.keys():
+            value = row[field]
+            if isinstance(value, bool):
+                if value:
+                    my_val = "true"
+                else:
+                    my_val = "false"
+                extra_row[field+"_bool_"] = my_val
+                extra_row[field] = str(value)
+            elif value is not None and isinstance(value, str) and len(value) > 3 and value[:2] == "n:":
+                space_index = value.find(" ")
+                if space_index == -1:
+                    str_value = value[2:]
+                else:
+                    str_value = value[2:space_index]
+                extra_row[field+"_num_"] = float(str_value)
+
+        row.update(extra_row)
         metadata_actions.append(row)
     bulk(es, metadata_actions, **bulk_kwargs)
-
-import json
 
 
 # inserting site metadata

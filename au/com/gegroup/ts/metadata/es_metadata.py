@@ -3,7 +3,7 @@ __author__ = 'topsykretts'
 
 class ESMetadata:
     """
-    Singleton class that initializes JDBC metadata
+    Singleton class that initializes Elasticsearch metadata
     """
     __instance = None
 
@@ -13,11 +13,7 @@ class ESMetadata:
         if ESMetadata.__instance is None:
             ESMetadata(sqlContext, **kwargs)
             return ESMetadata.__instance
-        do_refresh = kwargs.get("meta.es.refresh")
-        if do_refresh is not None and (
-                    (isinstance(do_refresh, bool) and do_refresh) or (
-                            isinstance(do_refresh, str) and do_refresh == "true")):
-            ESMetadata.refresh(sqlContext, **kwargs)
+        ESMetadata.refresh(sqlContext, **kwargs)
         return ESMetadata.__instance
 
     def __init__(self, sqlContext, **kwargs):

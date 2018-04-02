@@ -32,6 +32,7 @@ class IOTHistoryReader(Reader):
         self._set_metadata(**kwargs)
         self._rule_on = None
         self.handle_rule_on(rule_on)
+        self.kwargs = kwargs
 
     def handle_rule_on(self, rule_on):
         if rule_on is not None:
@@ -57,16 +58,23 @@ class IOTHistoryReader(Reader):
         # self._metadata_df.cache()
         self._metadata_df.createOrReplaceTempView("metadata")
 
-    def metadata(self, metadata, key_col="dis"):
+    def metadata(self, metadata, key_col="raw_id", debug=False, strict=False):
         """
         builder that initializes meta tags to be filtered.
         :param metadata: tags to be filtered like "supply and water and temp and sensor"
+        :param key_col: the key to join with elasticsearch metadata with history
         :return: reader object with tag_filter initialized
         """
         sql = self.to_sql_parser.parse(metadata)
         cols = sql[1]
         sql = sql[0]
-        self.check_valid_column(cols, self._metadata_df)
+        self._set_metadata(**self.kwargs)
+        isValid = self.check_valid_column(cols, self._metadata_df, strict)
+
+        if not isValid:
+            self._tag_filter = "false"
+            return self
+
         tag_query = " select " + key_col + " from metadata where " + key_col + " IS NOT NULL and " + sql
         if self._rule_on is not None:
             tag_query += " and " + self._rule_on
@@ -77,15 +85,20 @@ class IOTHistoryReader(Reader):
         for row in rows:
             point_names.append("'" + row[0] + "'")
         if len(point_names) > 0:
+            # todo check efficiency with long list of points
             self._tag_filter = "pointName in (" + ",".join(point_names) + ")"
         else:
             self._tag_filter = "false"
+
+        if debug:
+            print("tag query = ", tag_query)
+            print("tag filter = ", self._tag_filter)
         return self
 
     def get_metadata_df(self):
         return self._metadata_df
 
-    def check_valid_column(self, cols, df):
+    def check_valid_column(self, cols, df, strict=False):
         """
         Check if column names are valid
         :param cols: input cols in query
@@ -99,8 +112,15 @@ class IOTHistoryReader(Reader):
                 msg = "Column '%(col)s' is not present" % (
                     {'col': col})
                 messages.append(msg)
+        valid = True
         if len(messages) > 0:
             # This means some invalid column was present
+            valid = False
             dataframe_cols = str(df_cols)
             messages.append("Available columns in metadata: %(df_cols)s" % ({'df_cols': dataframe_cols}))
+        if strict and not valid:
             raise Exception("\n".join(messages))
+        elif not valid:
+            print("WARNING:")
+            print("\n".join(messages))
+        return valid

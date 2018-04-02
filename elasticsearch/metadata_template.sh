@@ -6,8 +6,24 @@ curl -XPUT ${1}:${2}/_template/metadata_template -H "Content-Type:application/js
     "metadata": {
       "dynamic_templates": [
         {
-          "everything_as_keywords": {
-            "match_mapping_type": "*",
+          "*_num_as_float_for_range_filter": {
+           "match": "*_num_",
+            "mapping":{
+              "type":"float"
+            }
+          }
+        },
+        {
+          "*_bool_as_boolean": {
+           "match": "*_bool_",
+            "mapping":{
+              "type":"boolean"
+            }
+          }
+        },
+        {
+          "everything_as_text_with_keyword": {
+            "match_mapping_type": "string",
             "mapping": {
               "type": "text",
               "fields": {

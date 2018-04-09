@@ -59,7 +59,7 @@ class HaystackParsingTest(BaseTestCase):
         haystack_query = 'feature == true'
         sql_result = self.parser.parse(haystack_query)
         print(sql_result[0])
-        assert "feature = 1" == sql_result[0]
+        assert "feature_bool_ = 1" == sql_result[0]
 
     def test_ref_only(self):
         haystack_query = 'siteRef == @a12345fD'
@@ -81,7 +81,7 @@ class HaystackParsingTest(BaseTestCase):
         print(sql_result[0])
         print(set(sql_result[1]))
         assert "( water = 'm:' and equipRef in (select equipRef from metadata where" \
-               " boiler = 'm:' and capacity = 100) ) or" \
+               " boiler = 'm:' and capacity_num_ = 100) ) or" \
                " ( equipRef in (select equipRef from metadata where fan = 'm:' and equip = 'm:') )" == sql_result[0]
 
     def test_nested_ref_mix(self):
@@ -90,8 +90,8 @@ class HaystackParsingTest(BaseTestCase):
         print(sql_result[0])
         print(sql_result[1])
         assert "siteRef in (select siteRef from metadata where boiler = 'm:' and air = 'm:') and " \
-               "equipRef in (select equipRef from metadata where boiler = 'm:' and capacity = 100)" == sql_result[0] or \
-               "equipRef in (select equipRef from metadata where boiler = 'm:' and capacity = 100) and" \
+               "equipRef in (select equipRef from metadata where boiler = 'm:' and capacity_num_ = 100)" == sql_result[0] or \
+               "equipRef in (select equipRef from metadata where boiler = 'm:' and capacity_num_ = 100) and" \
                " siteRef in (select siteRef from metadata where boiler = 'm:' and air = 'm:')" == sql_result[0]
 
     def test_null_query(self):

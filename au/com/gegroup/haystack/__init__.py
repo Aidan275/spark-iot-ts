@@ -102,9 +102,26 @@ class HaystackToSQL(parsimonious.NodeVisitor):
         return self.construct_query(children, "or")
 
     def visit_cmp(self, node, children):
+
+        # determine if value is decimal
+        isValDecimal = False
+        isValBool = False
+        for child in node:
+            for sub_child in child:
+                if sub_child.expr_name == "decimal":
+                    isValDecimal = True
+                if sub_child.expr_name == "bool":
+                    isValBool = True
+                break
+
         path = children[0]
         op = children[2]
         val = children[4][0]
+
+        if isValDecimal:
+            path = path.strip() + "_num_"
+        if isValBool:
+            path = path.strip() + "_bool_"
         # handling null and not null query..
         if val is None:
             val = "null"
@@ -117,7 +134,7 @@ class HaystackToSQL(parsimonious.NodeVisitor):
             if op == "=":
                 return path.strip()+" "+op+" "+val.strip() + " or " + path.strip() + " LIKE " + val.strip()[:-1] + " %'"
             elif op == "!=":
-                return path.strip()+" "+op+" "+val.strip() + " or " +\
+                return path.strip()+" "+op+" "+val.strip() + " and " +\
                     path.strip() + " NOT LIKE " + val.strip()[:-1] + " %'"
 
         return path.strip()+" "+op+" "+val.strip()

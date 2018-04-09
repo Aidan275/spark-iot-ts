@@ -22,7 +22,7 @@ class IOTHistoryReader(Reader):
         :param view_name: the name to temp table, that will be used in constructed queries
         :param rule_on: haystack format filter string of equipment level. Eg: 'equip and boiler'
         :param site_filter: haystack format filter string of site level. Directly applied to history. Eg: 'siteRef == "Site"'
-        :param config_options: a dict with configuration options like meta.es.nodes, meta.es.port, meta.es.resource, etc
+        :param kwargs: a dict with configuration options like meta.es.nodes, meta.es.port, meta.es.resource, etc
         :return: Reader object
         """
         self.to_sql_parser = HaystackToSQL()
@@ -57,6 +57,24 @@ class IOTHistoryReader(Reader):
         self._metadata_df = ESMetadata.getInstance(self._sqlContext, **kwargs)
         # self._metadata_df.cache()
         self._metadata_df.createOrReplaceTempView("metadata")
+
+    def query_metadata(self, query, debug=False, strict=False):
+        sql = self.to_sql_parser.parse(query)
+        cols = sql[1]
+        sql = sql[0]
+        self._set_metadata(**self.kwargs)
+        isValid = self.check_valid_column(cols, self._metadata_df, strict)
+        if not isValid:
+            self._tag_filter = "false"
+            return self
+
+        tag_query = sql
+        if self._rule_on is not None:
+            tag_query += " and " + self._rule_on
+        if debug:
+            print(tag_query)
+        return self._metadata_df.where(tag_query)
+
 
     def metadata(self, metadata, key_col="raw_id", debug=False, strict=False):
         """

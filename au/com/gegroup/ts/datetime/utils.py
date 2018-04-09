@@ -46,6 +46,14 @@ def yesterday():
     return date_tuple
 
 
+def today():
+    now = pd.datetime.now()
+    start = pd.datetime(now.year, month=now.month, day=now.day)
+    end = get_day_end(now)
+    date_tuple = (start, end)
+    return date_tuple
+
+
 def get_day_end(date):
     start = pd.datetime(date.year, month=date.month, day=date.day)
     end = start + pd.Timedelta('1 days') + pd.Timedelta('-1us')

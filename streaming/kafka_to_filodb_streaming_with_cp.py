@@ -23,15 +23,15 @@ def getSparkSessionInstance(sparkConf):
 
 # todo configure as cmd line options or config file
 
-kafka_topics = ["niagara_iot_scp_v2"]
+kafka_topics = ["niagara_iot_scp_apr_v1"]
 kafka_params = {"metadata.broker.list": "localhost:9092", "auto.offset.reset": "smallest"}
 checkpoint_dir = kafka_topics[0] + "_checkpoint"
 
 es_path = "niagara4_metadata_scp_json_v1/metadata"
-es_nodes = "localhost"
-es_port = "9200"
+es_nodes = "45.76.115.24"
+es_port = "9203"
 
-dataset = "niagara4_history_scp_v1"
+dataset = "niagara4_history_scp_v2"
 
 default_site = "PH_site"
 default_equipRef = "PH_equip"

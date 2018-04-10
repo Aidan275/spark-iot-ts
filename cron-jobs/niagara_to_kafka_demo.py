@@ -1,5 +1,4 @@
 import numpy
-from pyhaystack.exception import HaystackError
 from pyhaystack.client.ops.his import MetaSeries
 __author__ = 'topsykretts'
 
@@ -22,6 +21,7 @@ server_name = 'niagara_iot_scp_v2'
 query = 'his and point and kind!="Str"'
 session = pyhaystack.connect(**server_lookup[server_name])
 
+today = None
 
 # method to get histories for the server and range
 
@@ -66,6 +66,33 @@ kafka_configs = {
 
 producer = KafkaProducer(**kafka_configs)
 
+
+def send_to_kafka(rng):
+    for point_id in get_points():
+        try:
+            points_his = get_histories(point_id, rng)
+        except:
+            print("No records found for " + point_id + " in time range " + rng)
+            points_his = None
+
+        import json
+        if points_his is not None and isinstance(points_his, MetaSeries):
+            print("Sending ", point_id, " Records to Kafka")
+            for index, value in points_his.iteritems():
+                row_data = {"ts": str(index)}
+                if isinstance(value, numpy.bool_):
+                    if value:
+                        val = True
+                    else:
+                        val = False
+                    row_data["val"] = val
+                else:
+                    row_data["val"] = str(value)
+                row_data["pointName"] = point_id
+                # print(json.dumps(row_data, ensure_ascii=False))
+                producer.send(server_name, json.dumps(row_data, ensure_ascii=False)).get()
+            producer.flush()
+
 # determining range to read histories
 import datetime
 
@@ -82,54 +109,36 @@ import os
 from os.path import expanduser
 home_dir = expanduser("~")
 directory = home_dir + "/.niagara_iot"
-if not os.path.exists(directory):
-    os.makedirs(directory)
 
-try:
-    rng_file = open(directory + "/" + server_name+"_rng_lookup.txt", "r")
-    for line in rng_file:
-        start = line.rstrip()
-        break
-except FileNotFoundError:
-    start = None
+if today is None:
+    if not os.path.exists(directory):
+        os.makedirs(directory)
 
-if start is None:
-    start = to_zinc_dt(datetime.datetime.strptime("2018-03-28T00:00:00", "%Y-%m-%dT%H:%M:%S").replace(tzinfo=tz["tz"]))
-actual_now = datetime.datetime.now(tz=tz["tz"])
-record_now = to_zinc_dt(actual_now - datetime.timedelta(minutes=1))
-now = to_zinc_dt(actual_now)
-
-print("start = ", start)
-print("now = ", now)
-print("recorded_now = ", record_now)
-rng_file_write = open(directory + "/" + server_name+"_rng_lookup.txt", "w")
-rng = start + ", " + now
-print("rng = ", rng)
-for point_id in get_points():
     try:
-        points_his = get_histories(point_id, rng)
-    except:
-        print("No records found for " + point_id + " in time range " + rng)
-        points_his = None
+        rng_file = open(directory + "/" + server_name+"_rng_lookup.txt", "r")
+        for line in rng_file:
+            start = line.rstrip()
+            break
+    except FileNotFoundError:
+        start = None
 
-    import json
-    if points_his is not None and isinstance(points_his, MetaSeries):
-        print("Sending ", point_id, " Records to Kafka")
-        for index, value in points_his.iteritems():
-            row_data = {"ts": str(index)}
-            if isinstance(value, numpy.bool_):
-                if value:
-                    val = True
-                else:
-                    val = False
-                row_data["val"] = val
-            else:
-                row_data["val"] = str(value)
-            row_data["pointName"] = point_id
-            # print(json.dumps(row_data, ensure_ascii=False))
-            producer.send(server_name, json.dumps(row_data, ensure_ascii=False)).get()
-        producer.flush()
-# there is a delay from niagara server to give histories
-rng_file_write.write(record_now)
+    if start is None:
+        start = to_zinc_dt(datetime.datetime.strptime("2018-03-28T00:00:00", "%Y-%m-%dT%H:%M:%S").replace(tzinfo=tz["tz"]))
+    actual_now = datetime.datetime.now(tz=tz["tz"])
+    record_now = to_zinc_dt(actual_now - datetime.timedelta(minutes=1))
+    now = to_zinc_dt(actual_now)
+
+    print("start = ", start)
+    print("now = ", now)
+    print("recorded_now = ", record_now)
+    rng_file_write = open(directory + "/" + server_name+"_rng_lookup.txt", "w")
+    rng = start + ", " + now
+    send_to_kafka(rng)
+    rng_file_write.write(record_now)
+else:
+    rng = "today"
+    send_to_kafka(rng)
+print("rng = ", rng)
+
 
 

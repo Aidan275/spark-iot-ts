@@ -53,7 +53,7 @@ class HaystackParsingTest(BaseTestCase):
         haystack_query = "val == 120 and temperature == 34.54 and rate >= 30 and rate <= 67.56"
         sql_result = self.parser.parse(haystack_query)
         print(sql_result[0])
-        assert "val = 120 and temperature = 34.54 and rate >= 30 and rate <= 67.56" == sql_result[0]
+        assert "val_num_ = 120 and temperature_num_ = 34.54 and rate_num_ >= 30 and rate_num_ <= 67.56" == sql_result[0]
 
     def test_bool_match(self):
         haystack_query = 'feature == true'

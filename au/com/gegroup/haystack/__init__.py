@@ -52,7 +52,7 @@ class HaystackToSQL(parsimonious.NodeVisitor):
             null = "null"
             ref = "@" refVal (ws str)?
             refVal = ~r'[0-9a-zA-Z_:\-.\~]*'i
-            str = ~r'"(?P<content>[A-Z 0-9]*)"'i
+            str = ~r'"(?P<content>[0-9a-zA-Z _:\-.\~]*)"'i
             number = decimal
             decimal = "-"? digits ("." digits)?
             digits = ~r'[0-9][0-9_]*'i

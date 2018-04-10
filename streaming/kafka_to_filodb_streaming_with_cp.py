@@ -46,7 +46,7 @@ def createContextFunction():
     conf.setAppName("KafkaToFiloDBWithCp")
     conf.set("spark.sql.warehouse.dir", "/user/hive/warehouse")
     sc = SparkContext(conf=conf)
-    ssc = StreamingContext(sc, 60)
+    ssc = StreamingContext(sc, 300)
     sparkSession = getSparkSessionInstance(conf)
     kafkaStream = KafkaUtils.createDirectStream(ssc, kafka_topics, kafka_params)
     kafkaStream.foreachRDD(lambda rdd: process_rdd(rdd))
@@ -96,7 +96,7 @@ def process_rdd(rdd):
         points.cache()
         points.registerTempTable("points")
 
-        joinedDF = spark_session.sql("SELECT * from streamDF as h left join points as p on h.pointName = p.id")
+        joinedDF = spark_session.sql("SELECT * from streamDF as h left join points as p on h.pointName = p.raw_id")
 
         from pyspark.sql.functions import udf, col, lit
 

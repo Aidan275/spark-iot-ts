@@ -256,9 +256,8 @@ def to_step_signal(df, check_col, key_cols):
 
 
 def _get_up_time(current_time, lead_time, current_val, offset=0, unit="min"):
-
     if unit == "hr" or unit == "hour":
-        divider = 60*60
+        divider = 60 * 60
     elif unit == "sec" or unit == "second":
         divider = 1
     else:
@@ -277,11 +276,11 @@ def _get_up_time(current_time, lead_time, current_val, offset=0, unit="min"):
 
 
 get_up_time = func.udf(
-    lambda current_time, lead_time, current_val, time_limit: _get_up_time(current_time, lead_time, current_val,
-                                                                          time_limit), DoubleType())
+    lambda current_time, lead_time, current_val, time_limit, unit: _get_up_time(current_time, lead_time, current_val,
+                                                                                time_limit, unit=unit), DoubleType())
 
 
-def get_step_duration(step_df, check_col, key_cols, offset=0, duration_col="duration", timestamp_col="timestamp"):
+def get_step_duration(step_df, check_col, key_cols, offset=0, duration_col="duration", timestamp_col="timestamp", unit="min"):
     """
 
     :param step_df:
@@ -291,7 +290,9 @@ def get_step_duration(step_df, check_col, key_cols, offset=0, duration_col="dura
     :return:
     """
     window = Window.partitionBy(key_cols).orderBy("time").rowsBetween(1, 1)
-    df = step_df.withColumn(duration_col, get_up_time(func.col(timestamp_col), func.lead(timestamp_col, 1, None).over(window), func.col(check_col), func.lit(offset)))
+    df = step_df.withColumn(duration_col,
+                            get_up_time(func.col(timestamp_col), func.lead(timestamp_col, 1, None).over(window),
+                                        func.col(check_col), func.lit(offset), func.lit(unit)))
     required_cols = []
     required_cols.extend(["time", timestamp_col])
     required_cols.extend(key_cols)
@@ -299,8 +300,8 @@ def get_step_duration(step_df, check_col, key_cols, offset=0, duration_col="dura
     return df.select(required_cols)
 
 
-def get_sparks(bool_df, check_col, key_cols, offset=0, duration_col="duration", timestamp_col="timestamp"):
+def get_sparks(bool_df, check_col, key_cols, offset=0, duration_col="duration", timestamp_col="timestamp", unit="min"):
     step_df = to_step_signal(bool_df, check_col, key_cols)
-    duration_df = get_step_duration(step_df, check_col, key_cols, offset, duration_col, timestamp_col)
+    duration_df = get_step_duration(step_df, check_col, key_cols, offset, duration_col, timestamp_col, unit=unit)
     duration_df = duration_df.withColumnRenamed(check_col, "step_value")
     return duration_df

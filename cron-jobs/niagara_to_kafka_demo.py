@@ -135,6 +135,12 @@ if today is None:
     send_to_kafka(rng)
     rng_file_write.write(record_now)
 else:
-    rng = "today"
+    actual_now = datetime.datetime.now(tz=tz["tz"])
+    now = to_zinc_dt(actual_now)
+    before24hrs = actual_now - datetime.timedelta(hours=24)
+    yesterday = to_zinc_dt(before24hrs)
+    print("start = ", yesterday)
+    print("now = ", now)
+    rng = yesterday + ", " + now
     send_to_kafka(rng)
 print("rng = ", rng)

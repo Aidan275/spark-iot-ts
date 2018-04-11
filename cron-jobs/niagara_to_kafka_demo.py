@@ -5,11 +5,11 @@ __author__ = 'topsykretts'
 # server credentials
 
 server_lookup = {
-    "niagara_iot_scp_v2": {
+    "niagara_iot_scp_apr_v1": {
         "implementation": "n4",
-        "uri": "http://your_server:port",
-        "username": "your_username",
-        "password": "your_pass",
+        "uri": "http://175.45.115.115",
+        "username": "admin1",
+        "password": "Enviroman1",
         "pint": False
     }
 }
@@ -17,11 +17,10 @@ import pyhaystack
 import hszinc
 
 # get session
-server_name = 'niagara_iot_scp_v2'
+server_name = 'niagara_iot_scp_apr_v1'
 query = 'his and point and kind!="Str"'
 session = pyhaystack.connect(**server_lookup[server_name])
-
-today = None
+today = "today"
 
 # method to get histories for the server and range
 
@@ -72,12 +71,12 @@ def send_to_kafka(rng):
         try:
             points_his = get_histories(point_id, rng)
         except:
-            print("No records found for " + point_id + " in time range " + rng)
+            # print("No records found for " + point_id + " in time range " + rng)
             points_his = None
-
+    
         import json
         if points_his is not None and isinstance(points_his, MetaSeries):
-            print("Sending ", point_id, " Records to Kafka")
+            # print("Sending ", point_id, " Records to Kafka")
             for index, value in points_his.iteritems():
                 row_data = {"ts": str(index)}
                 if isinstance(value, numpy.bool_):
@@ -113,7 +112,7 @@ directory = home_dir + "/.niagara_iot"
 if today is None:
     if not os.path.exists(directory):
         os.makedirs(directory)
-
+    
     try:
         rng_file = open(directory + "/" + server_name+"_rng_lookup.txt", "r")
         for line in rng_file:
@@ -121,13 +120,13 @@ if today is None:
             break
     except FileNotFoundError:
         start = None
-
+    
     if start is None:
         start = to_zinc_dt(datetime.datetime.strptime("2018-03-28T00:00:00", "%Y-%m-%dT%H:%M:%S").replace(tzinfo=tz["tz"]))
     actual_now = datetime.datetime.now(tz=tz["tz"])
     record_now = to_zinc_dt(actual_now - datetime.timedelta(minutes=1))
     now = to_zinc_dt(actual_now)
-
+    
     print("start = ", start)
     print("now = ", now)
     print("recorded_now = ", record_now)
@@ -139,6 +138,3 @@ else:
     rng = "today"
     send_to_kafka(rng)
 print("rng = ", rng)
-
-
-

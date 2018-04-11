@@ -109,8 +109,14 @@ def process_rdd(rdd):
             else:
                 if unit is not None:
                     return float(value.replace(unit, "").strip())
-                else:
-                    return float(value)
+                else:  # Edge case of True or False values but kind isn't Bool
+                    try:
+                        return float(value)
+                    except ValueError:
+                        if isinstance(value, str) and value.lower() == "true":
+                            return 1.0
+                        else:
+                            return 0.0
 
         clean_udf = udf(lambda value, unit, kind: clean_raw_value(value, unit, kind), DoubleType())
         if "unit" not in joinedDF.columns:

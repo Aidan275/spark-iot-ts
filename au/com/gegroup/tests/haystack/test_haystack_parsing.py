@@ -65,14 +65,14 @@ class HaystackParsingTest(BaseTestCase):
         haystack_query = 'siteRef == @a12345fD'
         sql_result = self.parser.parse(haystack_query)
         print(sql_result[0])
-        assert "siteRef = 'r:a12345fD' or siteRef LIKE 'r:a12345fD %'" == sql_result[0]
+        assert "(siteRef = 'r:a12345fD' or siteRef LIKE 'r:a12345fD %')" == sql_result[0]
 
     def test_ref_with_desc(self):
         haystack_query = '(boilerPlantRef == @12345f-67890D "56 Pitt St Boiler Plant") and (air or water)'
         sql_result = self.parser.parse(haystack_query)
         print(sql_result[0])
-        assert "( boilerPlantRef = 'r:12345f-67890D' or" \
-               " boilerPlantRef LIKE 'r:12345f-67890D %' ) and ( air = 'm:' or water = 'm:' )" == sql_result[0]
+        assert "( (boilerPlantRef = 'r:12345f-67890D' or" \
+               " boilerPlantRef LIKE 'r:12345f-67890D %') ) and ( air = 'm:' or water = 'm:' )" == sql_result[0]
 
     def test_nested_ref(self):
         haystack_query = '(equipRef->boiler and equipRef->capacity == 100' \

@@ -132,10 +132,10 @@ class HaystackToSQL(parsimonious.NodeVisitor):
         elif len(val) > 3 and val[:3] == "'r:":
             # handling references
             if op == "=":
-                return path.strip()+" "+op+" "+val.strip() + " or " + path.strip() + " LIKE " + val.strip()[:-1] + " %'"
+                return "(" + path.strip()+" "+op+" "+val.strip() + " or " + path.strip() + " LIKE " + val.strip()[:-1] + " %')"
             elif op == "!=":
-                return path.strip()+" "+op+" "+val.strip() + " and " +\
-                    path.strip() + " NOT LIKE " + val.strip()[:-1] + " %'"
+                return "(" + path.strip()+" "+op+" "+val.strip() + " and " +\
+                    path.strip() + " NOT LIKE " + val.strip()[:-1] + " %')"
 
         return path.strip()+" "+op+" "+val.strip()
 

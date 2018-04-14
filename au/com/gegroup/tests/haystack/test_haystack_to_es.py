@@ -66,20 +66,20 @@ class HaystackToEsParsingTest(BaseTestCase):
         haystack_query = 'id == @S.SCP.Ground_AC_Unit_1.Run_Light'
         sql_result = self.parser.parse(haystack_query)
         print(sql_result[0])
-        assert "id.raw : r\:S.SCP.Ground_AC_Unit_1.Run_Light OR id.raw : r\:S.SCP.Ground_AC_Unit_1.Run_Light\ *" == sql_result[0]
+        assert "(id.raw : r\:S.SCP.Ground_AC_Unit_1.Run_Light OR id.raw : r\:S.SCP.Ground_AC_Unit_1.Run_Light\ *)" == sql_result[0]
 
     def test_ref_only_not_equal(self):
         haystack_query = 'id != @S.SCP.Ground_AC_Unit_1.Run_Light'
         sql_result = self.parser.parse(haystack_query)
         print(sql_result[0])
-        assert "NOT id.raw : r\:S.SCP.Ground_AC_Unit_1.Run_Light AND NOT id.raw : r\:S.SCP.Ground_AC_Unit_1.Run_Light\ *" == sql_result[0]
+        assert "(NOT id.raw : r\:S.SCP.Ground_AC_Unit_1.Run_Light AND NOT id.raw : r\:S.SCP.Ground_AC_Unit_1.Run_Light\ *)" == sql_result[0]
 
     def test_ref_with_desc(self):
         haystack_query = '(boilerPlantRef == @12345f-67890D "56 Pitt St Boiler Plant") and (air or water)'
         sql_result = self.parser.parse(haystack_query)
         print(sql_result[0])
-        assert '( boilerPlantRef.raw : r\:12345f-67890D OR' \
-               ' boilerPlantRef.raw : r\:12345f-67890D\ * ) AND ( air.raw:"m:" OR water.raw:"m:" )' == sql_result[0]
+        assert '( (boilerPlantRef.raw : r\:12345f-67890D OR' \
+               ' boilerPlantRef.raw : r\:12345f-67890D\ *) ) AND ( air.raw:"m:" OR water.raw:"m:" )' == sql_result[0]
 
     def test_null_query(self):
         haystack_query = "air and temp and return and sensor == null"

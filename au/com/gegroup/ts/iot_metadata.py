@@ -203,10 +203,10 @@ class HaystackToEs(HaystackToSQL):
         elif len(val) > 3 and val[:3] == "r\:":
             # handling references
             if op == ":":
-                return path.strip() + " " + op + " " + val.strip() + " OR " + path.strip() + " " + op + " " + val.strip() + "\ *"
+                return "(" + path.strip() + " " + op + " " + val.strip() + " OR " + path.strip() + " " + op + " " + val.strip() + "\ *)"
             elif op == "!=":
-                return "NOT " + path.strip() + " : " + val.strip() + " AND NOT " + \
-                       path.strip() + " : " + val.strip() + "\ *"
+                return "(NOT " + path.strip() + " : " + val.strip() + " AND NOT " + \
+                       path.strip() + " : " + val.strip() + "\ *)"
         elif op == "!=":
             return "NOT " + path.strip() + " : " + val.strip()
 

@@ -40,7 +40,7 @@ class IOTHistoryReader(Reader):
             cols = rule_on[1]
             rule_on = rule_on[0]
             self.check_valid_column(cols, self._metadata_df)
-            equip_query = "select equipRef from metadata where " + rule_on
+            equip_query = "select distinct(equipRef) from metadata where " + rule_on
             # print("Rule on query = ", equip_query)
             rows = self._sqlContext.sql(equip_query).collect()
             equip_refs = []
@@ -93,7 +93,7 @@ class IOTHistoryReader(Reader):
             self._tag_filter = "false"
             return self
 
-        tag_query = " select " + key_col + " from metadata where " + key_col + " IS NOT NULL and " + sql
+        tag_query = " select distinct(" + key_col + ") from metadata where " + key_col + " IS NOT NULL and " + sql
         if self._rule_on is not None:
             tag_query += " and " + self._rule_on
         # print(tag_query)

@@ -268,7 +268,7 @@ def _get_up_time(current_time, lead_time, current_val, offset=0, unit="min"):
     elif lead_time is not None:
         time_diff = (lead_time - current_time).total_seconds() / divider + offset
         if time_diff > 0:
-            return round(time_diff, 0)
+            return round(time_diff, 2)
         else:
             return 0.0
     else:

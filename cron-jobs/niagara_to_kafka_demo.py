@@ -55,7 +55,7 @@ def get_tz():
 from kafka import KafkaProducer
 
 kafka_configs = {
-    'bootstrap_servers': 'localhost:9092',
+    'bootstrap_servers': '45.76.115.24:9092',
     'key_serializer': lambda val: str(val).encode('utf-8'),
     'value_serializer': lambda val: str(val).encode('utf-8'),
     'acks': 'all',

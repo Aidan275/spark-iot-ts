@@ -9,7 +9,8 @@ curl -XPUT ${1}:${2}/_template/metadata_template -H "Content-Type:application/js
           "*_num_as_float_for_range_filter": {
            "match": "*_num_",
             "mapping":{
-              "type":"float"
+              "type":"float",
+              "ignore_malformed": true
             }
           }
         },

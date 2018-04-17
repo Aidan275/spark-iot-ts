@@ -1,7 +1,7 @@
 #!/bin/bash
 
 curl -XPUT ${1}:${2}/_template/metadata_template -H "Content-Type:application/json" -d '{
-  "template": "niagara*",
+  "template": "*",
 "mappings": {
     "metadata": {
       "dynamic_templates": [

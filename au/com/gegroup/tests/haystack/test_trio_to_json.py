@@ -64,5 +64,10 @@ class HaystackTrioToJsonTest(BaseTestCase):
         json_str = trio_to_json(trio_string)
         prettyPrint(json_str)
 
+    def test_separator(self):
+        trio_string = 'supply,air,temp,kind:"Number",equipRef:@123abc456,precision:1.0'
+        json_str = trio_to_json(trio_string, separator=",")
+        prettyPrint(json_str)
+
 if __name__ == '__main__':
     unittest.main()

@@ -90,7 +90,9 @@ class HaystackToSQL(parsimonious.NodeVisitor):
 
         for ref in ref_map.keys():
             val = ref_map[ref]
-            query = ref + " in (select " + ref + " from metadata where " + join_type.join(val) + ")"
+            baseTag = ref[:-3]
+            baseQuery = baseTag + " = 'm:' and "
+            query = ref + " in (select distinct(id) from metadata where " + baseQuery + join_type.join(val) + ")"
             ref_less.append(query)
         return join_type.join(ref_less)
 
@@ -132,10 +134,9 @@ class HaystackToSQL(parsimonious.NodeVisitor):
         elif len(val) > 3 and val[:3] == "'r:":
             # handling references
             if op == "=":
-                return "(" + path.strip()+" "+op+" "+val.strip() + " or " + path.strip() + " LIKE " + val.strip()[:-1] + " %')"
+                return path.strip()+" "+op+" "+val.strip()
             elif op == "!=":
-                return "(" + path.strip()+" "+op+" "+val.strip() + " and " +\
-                    path.strip() + " NOT LIKE " + val.strip()[:-1] + " %')"
+                return path.strip()+" "+op+" "+val.strip()
 
         return path.strip()+" "+op+" "+val.strip()
 

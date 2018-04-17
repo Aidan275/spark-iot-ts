@@ -65,14 +65,13 @@ class HaystackParsingTest(BaseTestCase):
         haystack_query = 'siteRef == @a12345fD'
         sql_result = self.parser.parse(haystack_query)
         print(sql_result[0])
-        assert "(siteRef = 'r:a12345fD' or siteRef LIKE 'r:a12345fD %')" == sql_result[0]
+        assert "siteRef = 'r:a12345fD'" == sql_result[0]
 
     def test_ref_with_desc(self):
         haystack_query = '(boilerPlantRef == @12345f-67890D "56 Pitt St Boiler Plant") and (air or water)'
         sql_result = self.parser.parse(haystack_query)
         print(sql_result[0])
-        assert "( (boilerPlantRef = 'r:12345f-67890D' or" \
-               " boilerPlantRef LIKE 'r:12345f-67890D %') ) and ( air = 'm:' or water = 'm:' )" == sql_result[0]
+        assert "( boilerPlantRef = 'r:12345f-67890D' ) and ( air = 'm:' or water = 'm:' )" == sql_result[0]
 
     def test_nested_ref(self):
         haystack_query = '(equipRef->boiler and equipRef->capacity == 100' \
@@ -80,19 +79,19 @@ class HaystackParsingTest(BaseTestCase):
         sql_result = self.parser.parse(haystack_query)
         print(sql_result[0])
         print(set(sql_result[1]))
-        assert "( water = 'm:' and equipRef in (select equipRef from metadata where" \
-               " boiler = 'm:' and capacity_num_ = 100) ) or" \
-               " ( equipRef in (select equipRef from metadata where fan = 'm:' and equip = 'm:') )" == sql_result[0]
+        assert "( water = 'm:' and equipRef in (select distinct(id) from metadata where equip = 'm:' and boiler = 'm:' and capacity_num_ = 100) ) or ( equipRef in (select distinct(id) from metadata where equip = 'm:' and fan = 'm:' and equip = 'm:') )" == \
+               sql_result[0]
 
     def test_nested_ref_mix(self):
         haystack_query = 'equipRef->boiler and equipRef->capacity == 100 and siteRef->boiler and siteRef->air'
         sql_result = self.parser.parse(haystack_query)
         print(sql_result[0])
         print(sql_result[1])
-        assert "siteRef in (select siteRef from metadata where boiler = 'm:' and air = 'm:') and " \
-               "equipRef in (select equipRef from metadata where boiler = 'm:' and capacity_num_ = 100)" == sql_result[0] or \
-               "equipRef in (select equipRef from metadata where boiler = 'm:' and capacity_num_ = 100) and" \
-               " siteRef in (select siteRef from metadata where boiler = 'm:' and air = 'm:')" == sql_result[0]
+        assert "equipRef in (select distinct(id) from metadata where equip = 'm:' and boiler = 'm:' and capacity_num_ = 100) and siteRef in (select distinct(id) from metadata where site = 'm:' and boiler = 'm:' and air = 'm:')" == \
+               sql_result[
+                   0] or \
+               "siteRef in (select distinct(id) from metadata where site = 'm:' and boiler = 'm:' and air = 'm:') and equipRef in (select distinct(id) from metadata where equip = 'm:' and boiler = 'm:' and capacity_num_ = 100)" == \
+               sql_result[0]
 
     def test_null_query(self):
         haystack_query = "air and temp and return and sensor == null"
@@ -105,6 +104,20 @@ class HaystackParsingTest(BaseTestCase):
         sql_result = self.parser.parse(haystack_query)
         print(sql_result[0])
         assert "air = 'm:' and temp = 'm:' and return = 'm:' and sensor is not null" == sql_result[0]
+
+    def test_ref_string_query(self):
+        haystack_query = "air and water and equipRef->navName==\"AHU_L1\""
+        sql_request = self.parser.parse(haystack_query)
+        print(sql_request[0])
+        assert "air = 'm:' and water = 'm:' and equipRef in (select distinct(id) from metadata where equip = 'm:' and navName = 'AHU_L1')" == \
+               sql_request[0]
+
+    def test_ref_id_query(self):
+        haystack_query = "air and water and equipRef->id==@AHU_L1"
+        sql_request = self.parser.parse(haystack_query)
+        print(sql_request[0])
+        assert "air = 'm:' and water = 'm:' and equipRef in (select distinct(id) from metadata where equip = 'm:' and id = 'r:AHU_L1')" == \
+               sql_request[0]
 
 
 if __name__ == '__main__':

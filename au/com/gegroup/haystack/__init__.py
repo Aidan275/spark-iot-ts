@@ -214,7 +214,7 @@ class HaystackToSQL(parsimonious.NodeVisitor):
     def visit_missing(self, node, children):
         children = flatten(children)
         tag = children[0].strip()
-        return tag + " != 'm:'"
+        return tag + " is null"
 
     def visit_ref(self, node, childern):
         return "'" + flatten(childern)[0] + "'"

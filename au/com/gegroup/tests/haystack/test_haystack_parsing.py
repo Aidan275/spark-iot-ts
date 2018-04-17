@@ -30,12 +30,12 @@ class HaystackParsingTest(BaseTestCase):
     def test_parsing_markers_with_parens_and_not(self):
         tag_haystack_query = "supply and (air or pressure) and temp and not sensor"
         tag_sql_result = self.parser.parse(tag_haystack_query)[0]
-        assert "supply = 'm:' and ( air = 'm:' or pressure = 'm:' ) and temp = 'm:' and sensor != 'm:'" == tag_sql_result
+        assert "supply = 'm:' and ( air = 'm:' or pressure = 'm:' ) and temp = 'm:' and sensor is null" == tag_sql_result
 
     def test_parsing_tag_and_non_tag_query(self):
         haystack_query = "return and water and temp and not sensor and equipRef==\"equip123\""
         sql_result = self.parser.parse(haystack_query)[0]
-        assert "return = 'm:' and water = 'm:' and temp = 'm:' and sensor != 'm:' and equipRef = 'equip123'" == sql_result
+        assert "return = 'm:' and water = 'm:' and temp = 'm:' and sensor is null and equipRef = 'equip123'" == sql_result
 
     def test_nested_parenthesis(self):
         haystack_query = '(return and (temp or otherVal == "abc" )) or (supply and pressure)'

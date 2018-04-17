@@ -40,12 +40,15 @@ class IOTHistoryReader(Reader):
             cols = rule_on[1]
             rule_on = rule_on[0]
             self.check_valid_column(cols, self._metadata_df)
-            equip_query = "select distinct(equipRef) from metadata where " + rule_on
-            # print("Rule on query = ", equip_query)
+            equip_level = ""
+            if "equip" not in cols:
+                equip_level = "equip = 'm:' and "
+            equip_query = "select distinct(raw_id) from metadata where " + equip_level + rule_on
+            print("Rule on query = ", equip_query)
             rows = self._sqlContext.sql(equip_query).collect()
             equip_refs = []
             for row in rows:
-                equip_refs.append("'" + row[0] + "'")
+                equip_refs.append("'r:" + row[0] + "'")
             if len(equip_refs) > 0:
                 self._rule_on = "equipRef in (" + ",".join(equip_refs) + ")"
             else:
@@ -70,11 +73,10 @@ class IOTHistoryReader(Reader):
 
         tag_query = sql
         if self._rule_on is not None:
-            tag_query += " and " + self._rule_on
+            tag_query = "(" + tag_query + ") and " + self._rule_on
         if debug:
             print(tag_query)
         return self._metadata_df.where(tag_query)
-
 
     def metadata(self, metadata, key_col="raw_id", debug=False, strict=False):
         """
@@ -95,7 +97,7 @@ class IOTHistoryReader(Reader):
 
         tag_query = " select distinct(" + key_col + ") from metadata where " + key_col + " IS NOT NULL and " + sql
         if self._rule_on is not None:
-            tag_query += " and " + self._rule_on
+            tag_query = "(" + tag_query + ") and " + self._rule_on
         # print(tag_query)
         rows = self._sqlContext.sql(tag_query).collect()
         point_names = []

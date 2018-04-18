@@ -26,6 +26,13 @@ def getSparkSessionInstance(sparkConf):
     return globals()['sparkSessionSingletonInstance']
 
 
+def getNiagaraSessionInstance():
+    if 'niagaraSessionInstance' not in globals():
+        server_name = 'niagara.server'
+        globals()['niagaraSessionInstance'] = pyhaystack.connect(**config.get(server_name))
+    return globals()['niagaraSessionInstance']
+
+
 es_path = config.get("meta.es.resource")
 es_nodes = config.get("meta.es.nodes")
 es_port = config.get("meta.es.port")
@@ -46,12 +53,8 @@ def createContextFunction():
     sparkSession = getSparkSessionInstance(conf)
     # todo bring data from niagara
 
-
-    # get session
-    server_name = 'niagara.server'
-    session = pyhaystack.connect(**config.get(server_name))
-    if len(sys.argv) > 0:
-        arg = sys.argv[0]
+    if len(sys.argv) > 1:
+        arg = sys.argv[1]
         start = None
         try:
             datetime.datetime.strptime(arg, "%Y-%m-%d")
@@ -65,12 +68,14 @@ def createContextFunction():
         """
         """
         # getting history as dataframe
+        session = getNiagaraSessionInstance()
         history_op = session.his_read_series(hszinc.Ref(point_id), rng=rng)
         history_op.wait()
         history = history_op.result
         return history
 
     def get_tz():
+        session = getNiagaraSessionInstance()
         about_op = session.about()
         about_op.wait()
         res = about_op.result
@@ -139,9 +144,12 @@ def createContextFunction():
         .option("es.port", es_port) \
         .load()
     points = points.where("point = 'm:' and his = 'm:'")
-    points.cache()
     points.registerTempTable("points")
+    points.cache()
+    points.show()
     his_json = points.rdd.flatMap(lambda row: get_history_json(row["raw_id"], get_rng(start)))
+    for json_str in his_json.take(3):
+        print(json_str)
     df = sparkSession.read.json(his_json)
     process_rdd(df.rdd)
     return ssc

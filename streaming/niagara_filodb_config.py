@@ -1,8 +1,8 @@
 __author__ = 'topsykretts'
 
 config = {
-    "meta.es.nodes": "localhost",
-    "meta.es.port": "9200",
+    "meta.es.nodes": "45.76.115.24",
+    "meta.es.port": "9203",
     "meta.es.resource": "metadata_goodmans_v2",
     "history.dataset": "history_goodmans_v2",
     "niagara.server": {

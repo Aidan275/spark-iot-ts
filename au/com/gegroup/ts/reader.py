@@ -2,7 +2,9 @@ __author__ = 'topsykretts'
 
 from ts.flint import FlintContext
 
-from au.com.gegroup.ts.datetime.utils import as_long_tuple
+from au.com.gegroup.ts.datetime.utils import *
+import pandas as pd
+import datetime
 
 
 class Reader(object):
@@ -62,9 +64,53 @@ class Reader(object):
         :param date_tuple: a tuple (from_date_in_long, to_date_in_long). unit is ms
         :return: reader object with date_filter initialized
         """
+        if isinstance(date_tuple, str):
+            date_tuple = Reader.process_string_date(date_tuple)
         date_tuple = as_long_tuple(date_tuple)
         self._date_filter = Reader._get_datetime_filter(date_tuple[0], date_tuple[1])
         return self
+
+    @staticmethod
+    def process_string_date(string_date):
+        if string_date.startswith("past_"):
+            delta_expr = string_date.replace("past_", "")
+            return last(pd.Timedelta(delta_expr))
+        elif string_date == "today":
+            return today()
+        elif string_date == "yesterday":
+            return yesterday()
+        elif string_date == "this_month":
+            return this_month()
+        elif string_date == "last_month":
+            return last_month()
+        else:
+            try:
+                if "," in string_date:
+                    fr, to = string_date.split(",", 1)
+                    fr = fr.strip()
+                    to = to.strip()
+                    if len(fr) == len("yyyy-MM-dd"):
+                        from_date = datetime.datetime.strptime(fr, '%Y-%m-%d')
+                    else:
+                        from_date = datetime.datetime.strptime(fr, '%Y-%m-%dT%H:%M:%S')
+                    if len(to) == len("yyyy-MM-dd"):
+                        to_date = datetime.datetime.strptime(to, '%Y-%m-%d')
+                    else:
+                        to_date = datetime.datetime.strptime(to, '%Y-%m-%dT%H:%M:%S')
+                    return from_date, to_date
+                else:
+                    to = string_date.strip()
+                    if len(to) == len("yyyy-MM-dd"):
+                        to_date = datetime.datetime.strptime(to, '%Y-%m-%d')
+                    else:
+                        to_date = datetime.datetime.strptime(to, '%Y-%m-%dT%H:%M:%S')
+                    return None, to_date
+            except:
+                raise Exception("Date format should be one of following \n"
+                                "%Y-%m-%d,%Y-%m-%d\n"
+                                "%Y-%m-%dT%H:%M:%S,%Y-%m-%dT%H:%M:%S\n"
+                                "%Y-%m-%d\n"
+                                "%Y-%m-%dT%H:%M:%S")
 
     def is_sorted(self, is_sorted):
         """

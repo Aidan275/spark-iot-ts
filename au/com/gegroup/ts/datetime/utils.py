@@ -18,6 +18,8 @@ def date_to_long(date_string, unit='ns'):
     Default is milliseconds
     :return: date in long/int64 format
     """
+    if date_string is None:
+        return None
     date_ts = pd.to_datetime(date_string)
     date_val = date_ts.value
     if 'ns' == unit.lower():

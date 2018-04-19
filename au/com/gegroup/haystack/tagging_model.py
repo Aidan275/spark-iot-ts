@@ -62,7 +62,12 @@ class HRef(HVal):
             val = val.strip()
             if val[:1] != '@':
                 return False
-            self._val = val.replace("@", "")
+            space_index = val.find(" ")
+            if space_index == -1:
+                val = val[1:]
+            else:
+                val = val[1:space_index]
+            self._val = val
             self._key = key.strip()
             return True
         else:

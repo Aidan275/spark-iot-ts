@@ -10,7 +10,7 @@ from pyspark.sql import Row
 import datetime, pytz
 import iso8601 as iso
 from pyspark.sql.types import *
-from .niagara_filodb_config import config
+from streaming.niagara_filodb_config import config
 import pyhaystack
 import hszinc
 import sys
@@ -115,7 +115,7 @@ def createContextFunction():
         try:
             points_his = get_histories(point_id, rng)
         except:
-            # print("No records found for " + point_id + " in time range " + rng)
+            print("No records found for " + point_id + " in time range " + rng)
             points_his = None
 
         import json
@@ -147,11 +147,11 @@ def createContextFunction():
     points.registerTempTable("points")
     points.cache()
     points.show()
-    his_json = points.rdd.flatMap(lambda row: get_history_json(row["raw_id"], get_rng(start)))
+    rng = get_rng(start)
+    his_json = points.rdd.flatMap(lambda row: get_history_json(row["raw_id"], rng))
     for json_str in his_json.take(3):
         print(json_str)
-    df = sparkSession.read.json(his_json)
-    process_rdd(df.rdd)
+    process_rdd(his_json)
     return ssc
 
 
@@ -167,8 +167,7 @@ def clean_data(json_str):
     ts = str(json_val['ts'])
     timestamp = iso.parse_date(ts)
     datetime_val = convert_to_timestamp(ts)
-    equipName = ""
-    rows = [timestamp, datetime_val, pointName, equipName, val]
+    rows = [timestamp, datetime_val, pointName, val]
     return Row(*rows)
 
 
@@ -177,7 +176,6 @@ def get_schema():
         StructField("timestamp", TimestampType(), False),
         StructField("datetime", LongType(), False),
         StructField("pointName", StringType(), False),
-        StructField("equipName", StringType(), False),
         StructField("raw_value", StringType(), False)
     ])
 
@@ -185,7 +183,7 @@ def get_schema():
 def process_rdd(rdd):
     if not rdd.count() == 0:
         spark_session = getSparkSessionInstance(rdd.context.getConf())
-        row_rdd = rdd.map(lambda value: clean_data(value[1]))
+        row_rdd = rdd.map(lambda value: clean_data(value))
         streamDF = spark_session.createDataFrame(row_rdd, get_schema())
         streamDF.createOrReplaceTempView("streamDF")
         joinedDF = spark_session.sql("SELECT * from streamDF as h left join points as p on h.pointName = p.raw_id")
@@ -221,11 +219,8 @@ def process_rdd(rdd):
         year_month_udf = udf(lambda date_val: get_year_month(date_val), StringType())
         final_df = joinedDF.withColumn("yearMonth", year_month_udf(col("datetime")))
         # generating partition key as using only siteRef as partition may produce to large partition and cassandra partition should be < 1 GB
-        final_df = final_df.select("timestamp", "datetime", "yearMonth", "pointName", "siteRef", "equipRef", "value",
+        final_df = final_df.select("timestamp", "datetime", "yearMonth", "pointName", "value",
                                    "unit")
-        final_df = final_df.withColumnRenamed("equipRef", "equipName")
-        final_df = final_df.where("siteRef is not null and equipName is not null")
-
         # def fill_null_value(value, filler):
         #     if value is None:
         #         return filler
@@ -242,13 +237,13 @@ def process_rdd(rdd):
 
         final_df.write.format("filodb.spark") \
             .option("dataset", dataset) \
-            .option("partition_keys", "siteRef,yearMonth") \
-            .option("row_keys", "datetime,equipName,pointName") \
+            .option("partition_keys", "yearMonth") \
+            .option("row_keys", "datetime,pointName") \
             .option("chunk_size", "500") \
             .mode("append") \
             .save()
 
 
-ssc = StreamingContext.getOrCreate(None, createContextFunction)
+ssc = createContextFunction()
 ssc.start()
 ssc.awaitTermination()

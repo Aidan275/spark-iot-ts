@@ -5,6 +5,7 @@ from ts.flint import FlintContext
 from au.com.gegroup.ts.datetime.utils import *
 import pandas as pd
 import datetime
+from pyspark.sql.functions import broadcast
 
 
 class Reader(object):
@@ -31,6 +32,7 @@ class Reader(object):
         self.load_filter = site_filter
         self._date_filter = None
         self._tag_filter = None
+        self._meta_filter = None
         self._is_sorted = True
         if isinstance(dataset, str):
             self.filodb_dataset = dataset
@@ -44,10 +46,14 @@ class Reader(object):
         self._df.createOrReplaceTempView(self.view_name)
         self._timestamp = True
         self._tag_query = None
+        self._metadata_df = None
 
     def has_timestamp(self, boolean):
         self._timestamp = boolean
         return self
+
+    def query_metadata(self, query, debug=False, strict=False):
+        pass
 
     def metadata(self, metadata):
         """
@@ -121,17 +127,24 @@ class Reader(object):
         self._is_sorted = is_sorted
         return self
 
-    def read(self):
+    def read(self, key_cols=["siteRef", "equipRef"]):
         """
         Construct a query with date_filter, tags_filter and key and reads from temp view created
         :param key: key for the timeseries dataframe that will be used for joins
         :return: flint's Timeseries dataframe
         """
+        # todo check direct join
         query = self._get_query()
+        ref_cols = ["raw_id"]
+        ref_cols.extend(key_cols)
+        meta_df = self._metadata_df.where(self._meta_filter).select(ref_cols)
+        his_df = self._fc.read.dataframe(self._sqlContext.sql(query), is_sorted=self._is_sorted, unit='ns')
+        his_df = his_df.join(broadcast(meta_df), his_df.pointName == meta_df.raw_id, "left_outer").drop("raw_id")
         self._tag_filter = None
+        self._meta_filter = None
         self._date_filter = None
         # print("query = ", query)
-        return self._fc.read.dataframe(self._sqlContext.sql(query), is_sorted=self._is_sorted, unit='ns')
+        return his_df
 
     def _get_query(self):
         """
@@ -159,12 +172,8 @@ class Reader(object):
         if not self._timestamp:
             timestamp_select = ''
 
-        equip_name_select = ''
-        if "equipName" in self._df.columns:
-            equip_name_select = ", equipName"
-
-        select = "select %(timestamp)s datetime as time, value as value , pointName as pointName, siteRef as siteRef %(equipName)s from %(view)s" % \
-                 ({'view': self.view_name, 'timestamp': timestamp_select, 'equipName': equip_name_select})
+        select = "select %(timestamp)s datetime as time, pointName as pointName, value as value , unit as unit  from %(view)s" % \
+                 ({'view': self.view_name, 'timestamp': timestamp_select})
         sql = "%(select)s  where %(date_filter)s  %(tags_filter)s" % (
             {'date_filter': datetime_filter, 'tags_filter': tag_filter, 'select': select})
         return sql

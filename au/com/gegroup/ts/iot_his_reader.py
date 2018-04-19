@@ -14,21 +14,20 @@ class IOTHistoryReader(Reader):
     Load filter is None by default.
     """
 
-    def __init__(self, sqlContext, dataset, view_name, rule_on=None, site_filter=None, **kwargs):
+    def __init__(self, sqlContext, dataset, view_name, rule_on=None, **kwargs):
         """
         constructor for Reader object to read from filodb
         :param sqlContext: current spark's sqlContext
         :param dataset: the filodb dataset name or dataframe that should be loaded
         :param view_name: the name to temp table, that will be used in constructed queries
         :param rule_on: haystack format filter string of equipment level. Eg: 'equip and boiler'
-        :param site_filter: haystack format filter string of site level. Directly applied to history. Eg: 'siteRef == "Site"'
         :param kwargs: a dict with configuration options like meta.es.nodes, meta.es.port, meta.es.resource, etc
         :return: Reader object
         """
         self.to_sql_parser = HaystackToSQL()
-        if site_filter is not None:
-            site_filter = self.to_sql_parser.parse(site_filter)[0]
-        super().__init__(sqlContext, dataset, view_name, site_filter)
+        # if site_filter is not None:
+        #     site_filter = self.to_sql_parser.parse(site_filter)[0]
+        super().__init__(sqlContext, dataset, view_name, None)
         self._set_metadata(**kwargs)
         self._rule_on = None
         self.handle_rule_on(rule_on)
@@ -43,18 +42,19 @@ class IOTHistoryReader(Reader):
             equip_level = ""
             if "equip" not in cols:
                 equip_level = "equip = 'm:' and "
-            equip_query = "select distinct(raw_id) from metadata where " + equip_level + rule_on
+            equip_query = "select distinct(id) from metadata where " + equip_level + "(" + rule_on + ")"
             print("Rule on query = ", equip_query)
-            rows = self._sqlContext.sql(equip_query).collect()
-            equip_refs = []
-            for row in rows:
-                equip_refs.append("'r:" + row[0] + "'")
-            if len(equip_refs) > 0:
-                self._rule_on = "equipRef in (" + ",".join(equip_refs) + ")"
-            else:
-                self._rule_on = "false"
-                print("Rule on didn't match with any records..")
-                # print(self._rule_on)
+            self._rule_on = "equipRef in (" + equip_query + ")"
+            # rows = self._sqlContext.sql(equip_query).collect()
+            # equip_refs = []
+            # for row in rows:
+            #     equip_refs.append("'r:" + row[0] + "'")
+            # if len(equip_refs) > 0:
+            #     self._rule_on = "equipRef in (" + ",".join(equip_refs) + ")"
+            # else:
+            #     self._rule_on = "false"
+            #     print("Rule on didn't match with any records..")
+            #     print(self._rule_on)
 
     def _set_metadata(self, **kwargs):
         self._metadata_df = ESMetadata.getInstance(self._sqlContext, **kwargs)
@@ -93,22 +93,24 @@ class IOTHistoryReader(Reader):
 
         if not isValid:
             self._tag_filter = "false"
+            self._meta_filter = "false"
             return self
 
-        tag_query = " select distinct(" + key_col + ") from metadata where " + key_col + " IS NOT NULL and " + sql
+        tag_query = " select distinct(" + key_col + ") from metadata where " + key_col + " IS NOT NULL and (" + sql + ")"
         if self._rule_on is not None:
-            tag_query = "(" + tag_query + ") and " + self._rule_on
+            tag_query = tag_query + " and " + self._rule_on
         # print(tag_query)
-        rows = self._sqlContext.sql(tag_query).collect()
-        point_names = []
-
-        for row in rows:
-            point_names.append("'" + row[0] + "'")
-        if len(point_names) > 0:
-            # todo check efficiency with long list of points
-            self._tag_filter = "pointName in (" + ",".join(point_names) + ")"
-        else:
-            self._tag_filter = "false"
+        self._meta_filter = "(" + sql + ") and " + self._rule_on
+        self._tag_filter = "pointName in (" + tag_query + ")"
+        # rows = self._sqlContext.sql(tag_query).collect()
+        # point_names = []
+        #
+        # for row in rows:
+        #     point_names.append("'" + row[0] + "'")
+        # if len(point_names) > 0:
+        #     self._tag_filter = "pointName in (" + ",".join(point_names) + ")"
+        # else:
+        #     self._tag_filter = "false"
 
         if debug:
             print("tag query = ", tag_query)

@@ -81,10 +81,8 @@ It is used to connect histories in FiloDB and metadata in elasticsearch with vis
 
 Metadata is stored in elasticsearch, hence the rules or convention regarding elasticsearch mapping or field names should be followed.
 The general idea is to ETL haystack format metadata from edge devices to elasticsearch in cloud.
-In general, key-value pair will be used as tag or metadata.
-The markers of haystack format will be changed to marker as field name and value as 1.
-The elasticsearch type should be "metadata" (as convention) and the index should be aliased to "metadata".
-
+Data is stored in elasticsearch in [project-haystack json format](https://project-haystack.org/doc/Json) with some conventions.
+A boolean field will have suffix `_bool_` and numeric field will have suffix `_num_`.
 Example 1 (Equipment Metadata):
 
 ```
@@ -94,15 +92,15 @@ Example 1 (Equipment Metadata):
 "_id": "site_boiler_1",
 "_score": 1,
 "_source": {
-"id": "site_boiler_1",
-"equip": 1,
-"boiler": 1,
-"hvac": 1,
-"capacity": 100,
+"id": "r:site_boiler_1",
+"equip": "m:",
+"boiler": "m:",
+"hvac": "m:",
+"capacity": "n:100",
+"capacity_num_": 100,
 "name": "Boiler 1",
-"equipRef": "Site Boiler 1",
-"levelRef": "level1",
-"siteRef": "site"
+"levelRef": "r:level1",
+"siteRef": "r:site"
 }
 }
 ```
@@ -114,35 +112,25 @@ Example 2 (Points Metadata):
 "_id": "OAH",
 "_score": 1,
 "_source": {
-"hisSize": "27,292",
-"mod": "11-Apr-2017 Tue 01:23:30 UTC",
 "tz": "Sydney",
-"air": 1,
-"point": 1,
+"air": "m:",
+"point": "m:",
 "dis": "OAH",
-"analytics": 1,
-"regionRef": "Western Corridor",
-"his": 1,
+"analytics": "m:",
+"regionRef": "r:Western_Corridor",
+"his": "m:",
 "disMacro": "$equipRef $navName",
-"imported": 1,
-"humidity": 1,
+"imported": "m:",
+"humidity": "m:",
 "navName": "OAH",
-"equipRef": "Site Building Info",
-"id": "Site Building Info OAH",
-"hisRollup": "max",
-"hisEnd": "12-Oct-2017 Thu 07:00:01 AEDT",
-"hisStart": "1-Jan-2017 Sun 00:15:00 AEDT",
-"levelRef": "Site Plant",
-"haystackConnRef": "DEMO_CLIENT",
-"hisStatus": "ok",
-"hisId": "84.095",
+"equipRef": "r:Site_Building_Info",
+"id": "r:Site_Building_Info_OAH",
+"levelRef": "r:Site_Plant",
 "kind": "Number",
-"siteRef": "Site",
-"hisEndVal": "67.959 %",
+"siteRef": "r:Site",
 "unit": "%",
-"haystackHis": "H.DEMO_ST.DEMO_Plant_ACU~242d1~2420OAH",
-"outside": 1,
-"sensor": 1
+"outside": "m:",
+"sensor": "m:"
 }
 }
 ```
@@ -152,9 +140,7 @@ Following are the fields for history data.
 
 timestamp, datetime, pointName and value are the timeseries data.
 
-siteRef and yearMonth are for partition.
-
-siteRef and equipName generally will be used as joining keys to get different points of same equipment.
+yearMonth derived from time column is for partition.
 
 For a partition, the data will be sorted by time which is main advantage of using FiloDB for timeseries analytics.
 
@@ -163,8 +149,6 @@ For a partition, the data will be sorted by time which is main advantage of usin
  |-- pointName: string (nullable = false)
  |-- timestamp: timestamp (nullable = false)
  |-- datetime: long (nullable = false)
- |-- equipName: string (nullable = false)
- |-- siteRef: string (nullable = false)
  |-- unit: string (nullable = true)
  |-- yearMonth: string (nullable = false)
  |-- value: double (nullable = true)
@@ -172,16 +156,16 @@ For a partition, the data will be sorted by time which is main advantage of usin
 
 Sample Data:
 ```
-+--------------------+--------------------+-------------------+--------------+-------+----+---------+-----+
-|           pointName|           timestamp|           datetime|     equipName|siteRef|unit|yearMonth|value|
-+--------------------+--------------------+-------------------+--------------+-------+----+---------+-----+
-|S.site.hayTest.Bool1|2018-02-02 00:19:...|1517530772000000000|S.site.hayTest| S.site|    |  2018-02|  0.0|
-|S.site.hayTest.Bool1|2018-02-02 00:20:...|1517530803000000000|S.site.hayTest| S.site|    |  2018-02|  1.0|
-|S.site.hayTest.Bool1|2018-02-02 00:20:...|1517530805000000000|S.site.hayTest| S.site|    |  2018-02|  0.0|
-|S.site.hayTest.Bool1|2018-02-02 00:20:...|1517530811000000000|S.site.hayTest| S.site|    |  2018-02|  1.0|
-|S.site.hayTest.Bool1|2018-02-02 00:20:...|1517530815000000000|S.site.hayTest| S.site|    |  2018-02|  0.0|
-|S.site.hayTest.Bool1|2018-02-02 00:20:...|1517530824000000000|S.site.hayTest| S.site|    |  2018-02|  0.0|
-+--------------------+--------------------+-------------------+--------------+-------+----+---------+-----+
++--------------------+--------------------+-------------------+----+---------+-----+
+|           pointName|           timestamp|           datetime|unit|yearMonth|value|
++--------------------+--------------------+-------------------+----+---------+-----+
+|S.site.hayTest.Bool1|2018-02-02 00:19:...|1517530772000000000|    |  2018-02|  0.0|
+|S.site.hayTest.Bool1|2018-02-02 00:20:...|1517530803000000000|    |  2018-02|  1.0|
+|S.site.hayTest.Bool1|2018-02-02 00:20:...|1517530805000000000|    |  2018-02|  0.0|
+|S.site.hayTest.Bool1|2018-02-02 00:20:...|1517530811000000000|    |  2018-02|  1.0|
+|S.site.hayTest.Bool1|2018-02-02 00:20:...|1517530815000000000|    |  2018-02|  0.0|
+|S.site.hayTest.Bool1|2018-02-02 00:20:...|1517530824000000000|    |  2018-02|  0.0|
++--------------------+--------------------+-------------------+----+---------+-----+
 ```
 
 ## Examples
@@ -192,8 +176,6 @@ Sample Data:
 - `meta.es.nodes` -> The host address of elasticsearch installation for metadata. Default: `localhost`
 - `meta.es.port` -> The port of elasticsearch installation for metadata. Default: `9200`
 - `meta.es.resource` -> The resource (index/type) of elasticsearch to read metadata from. Default: `metadata/metadata`
-- `meta.es.refresh` -> Should the elasticsearch metadata be refreshed on new `IOTHistoryReader` object creation? Default: `false`
-
 
 > Elasticsearch config can also be set by following environment variables:
 - `META_ES_NODES`
@@ -202,20 +184,19 @@ Sample Data:
 
 
 ```
-from au.com.gegroup.ts.iot_his_reader import IOTHistoryReader
+from nubespark.ts.iot_his_reader import IOTHistoryReader
 es_options = {
  "meta.es.nodes":"localhost",
- "meta.es.port":"9202",
+ "meta.es.port":"9200",
  "meta.es.resource":"niagara4_metadata_v2/metadata",
  "meta.es.refresh":"true"
 }
-his_reader = IOTHistoryReader(sqlContext, dataset="niagara4_history_v1", view_name="niagara4_server1_his", rule_on="equipRef == @S.site.hayTest", site_filter="siteRef == @S.site", **es_options)
+his_reader = IOTHistoryReader(sqlContext, dataset="niagara4_history_v1", view_name="niagara4_server1_his", rule_on="equipRef == @S.site.hayTest", **es_options)
 ```
 
 - `dataset` -> name of FiloDB history dataset
 - `view_name` -> temporary view created by Apache Spark SQL
 - `rule_on` -> equipment level filter in haystack format
-- `site_filter` -> site level filter in haystack format
 - `**es_options` -> kwargs containing configuration options
 
 ### Accessing history as Spark dataframe
@@ -233,12 +214,11 @@ his_reader.get_metadata_df().show()
 ### Reading point using metadata and history range
 
 ```
-from au.com.gegroup.ts.datetime.utils import *
-boolHis = reader.metadata('his and point and id == @S.site.hayTest.Bool1', key_col="id").history(this_month()).read()
+from nubespark.ts.datetime.utils import *
+boolHis = reader.metadata('his and point and id == @S.site.hayTest.Bool1').history("today").read()
 ```
-metadata has two arguments: points filter in haystack format and the field of metadata that should be matched with pointName/id of history
 
-history takes a tuple with two python datetime.datetime elements
+history takes a tuple with two python datetime.datetime elements or some strings like "today", "yesterday", "this_month", etc
 i.e this_month() = (datetime.datetime(2018, 2, 1, 0, 0), datetime.datetime(2018, 2, 28, 23, 59, 59, 999999)) for Feb 2018
 
 The query may return multiple points as well
@@ -256,6 +236,7 @@ num1His = his_reader.metadata('his and point and id == @S.site.hayTest.Num1', ke
 
 **1) Aggregating on whole history**
 ```
+import pyspark.sql.functions as func
 his_reader.get_df().select(func.min("timestamp").alias("min_date"), func.max("timestamp").alias("max_date")).show()
 +--------------------+--------------------+
 |            min_date|            max_date|
@@ -266,10 +247,10 @@ his_reader.get_df().select(func.min("timestamp").alias("min_date"), func.max("ti
 
 **2) Joining timeseries dataframes (Temporal Joins)**
 ```
-num1His = reader.metadata('his and point and id == @S.site.hayTest.Num1', key_col="id").history(this_month()).read()
-boolHis = reader.metadata('his and point and id == @S.site.hayTest.Bool1', key_col="id").history(this_month()).read()
+num1His = reader.metadata('his and point and id == @S.site.hayTest.Num1').history(this_month()).read()
+boolHis = reader.metadata('his and point and id == @S.site.hayTest.Bool1').history(this_month()).read()
 
-joinedHis = num1His.leftJoin(boolHis, tolerance="1 days", key =["siteRef", "equipName"], right_alias="bool1")
+joinedHis = num1His.leftJoin(boolHis, tolerance="1 days", key =["siteRef", "equipRef"], right_alias="bool1")
 ```
 
 **3) Merging timeseries dataframes (with same schema) preserving sorting by time**
@@ -294,7 +275,7 @@ key=["siteRef","equipName","pointName"])
 variance_df.where("pointName != 'S.site.hayTest.Bool1'").show()
 
 +-------------------+--------------------+-------+-------------------+-------+--------------+--------------------+
-|               time|           timestamp|  value|          pointName|siteRef|     equipName|      value_variance|
+|               time|           timestamp|  value|          pointName|siteRef|     equipRef |      value_variance|
 +-------------------+--------------------+-------+-------------------+-------+--------------+--------------------+
 |1520563500017999872|2018-03-09 02:45:...|50.3811|S.site.hayTest.Num2| S.site|S.site.hayTest|                 NaN|
 |1520564400012999936|2018-03-09 03:00:...|50.6379|S.site.hayTest.Num2| S.site|S.site.hayTest| 0.03297311999999958|
@@ -325,7 +306,7 @@ movAvg_df = df.withColumn('movingAverage', movingAverageUdf(func.col("window_pas
 movAvg_df.where("movingAverage > 0").show()
 
 +-------------------+--------------------+-------+-------------------+-------+--------------+------------------+
-|               time|           timestamp|  value|          pointName|siteRef|     equipName|     movingAverage|
+|               time|           timestamp|  value|          pointName|siteRef|     equipRef |     movingAverage|
 +-------------------+--------------------+-------+-------------------+-------+--------------+------------------+
 |1520563500017999872|2018-03-09 02:45:...|50.3811|S.site.hayTest.Num2| S.site|S.site.hayTest|           50.3811|
 |1520564400012999936|2018-03-09 03:00:...|50.6379|S.site.hayTest.Num2| S.site|S.site.hayTest|           50.5095|
@@ -345,7 +326,7 @@ summarized_stddev_df = movAvg_df.summarize(summarizers.stddev('value'), key=["si
 summarized_stddev_df.show()
 
 +----+-------+--------------+--------------------+-------------------+
-|time|siteRef|     equipName|           pointName|       value_stddev|
+|time|siteRef|     equipRef |           pointName|       value_stddev|
 +----+-------+--------------+--------------------+-------------------+
 |   0| S.site|S.site.hayTest|S.site.hayTest.Bool1|                0.0|
 |   0| S.site|S.site.hayTest| S.site.hayTest.Num2|0.28202272739583134|
@@ -355,7 +336,7 @@ summarized_stddev_df.show()
 
 **7) Rolling up histories (Summarizing by intervals)**
 ```
-from au.com.gegroup.ts.spark.utils import *
+from nubespark.ts.spark.utils import *
 min_max = histories.select(func.min("timestamp").alias("min"), func.max("timestamp").alias("max")).collect()
 
 clock = clocks.uniform(sqlContext, frequency="1day", offset="0ns", begin_date_time=str(min_max[0][0].date()),
@@ -365,7 +346,7 @@ dailyAvg_df = histories.summarizeIntervals(clock, summarizers.mean("value"), key
 dailyAvg_df = get_timestamp_col(dailyAvg_df, "timestamp", tz="GMT")
 dailyAvg_df.show()
 +-------------------+-------+--------------+--------------------+------------------+--------------------+
-|               time|siteRef|     equipName|           pointName|        value_mean|           timestamp|
+|               time|siteRef|     equipRef |           pointName|        value_mean|           timestamp|
 +-------------------+-------+--------------+--------------------+------------------+--------------------+
 |1520553600000000000| S.site|S.site.hayTest|S.site.hayTest.Bool1|               0.0|2018-03-09 00:00:...|
 |1520553600000000000| S.site|S.site.hayTest| S.site.hayTest.Num2|50.553811764705884|2018-03-09 00:00:...|

@@ -1,3 +1,6 @@
 .idea
 *metastore_db
 derby.log
+build
+dist
+*.egg-info

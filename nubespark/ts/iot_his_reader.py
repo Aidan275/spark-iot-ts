@@ -100,7 +100,10 @@ class IOTHistoryReader(Reader):
         if self._rule_on is not None:
             tag_query = tag_query + " and " + self._rule_on
         # print(tag_query)
-        self._meta_filter = "(" + sql + ") and " + self._rule_on
+        if self._rule_on is not None:
+            self._meta_filter = "(" + sql + ") and " + self._rule_on
+        else:
+            self._meta_filter = sql
         self._tag_filter = "pointName in (" + tag_query + ")"
         # rows = self._sqlContext.sql(tag_query).collect()
         # point_names = []

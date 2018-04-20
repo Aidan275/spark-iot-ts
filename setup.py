@@ -1,6 +1,6 @@
 __author__ = 'topsykretts'
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
    name='nubespark',
@@ -8,6 +8,6 @@ setup(
    description='A module for processing IOT timeseries data with spark',
    author='Shishir Adhikari',
    author_email='itsmeccr@gmail.com',
-   packages=['nubespark'],  #same as name
+   packages=find_packages(),  #same as name
    # install_requires=['bar', 'greek'], #external packages as dependencies
 )

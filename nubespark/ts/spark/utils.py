@@ -329,3 +329,23 @@ def export_sparks(df, ruleRef, dataset):
         .mode("append") \
         .save()
 
+
+def resample(df, time_in_sec=900, key_cols=None):
+    """
+        Resamples the timestamps to the time_in_sec period (default 15min)
+        :param df: the dataframe that should be resampled
+        :param time_in_sec: time in seconds used for the resampling period 
+        :param key_cols: list of columns to use as the grouping key
+        :return: resampled timeseries df
+        """
+    frequency = str(time_in_sec) + 's'
+    if key_cols is None:
+        key_cols = ["siteRef", "equipRef", "pointName"]
+
+    min_max = df.select(func.min("timestamp").alias("min"), func.max("timestamp").alias("max")).collect()
+    clk_pulse = uniform(sqlContext, frequency, offset='0s', begin_date_time=str(min_max[0][0].replace(second=0, microsecond=0)), end_date_time=str(min_max[0][1].replace(second=0, microsecond=0)))
+    keys_df = df.select(key_cols).distinct()
+    clk_pulse_keys = clk_pulse.join(func.broadcast(keys_df))   
+    resampled_df = clk_pulse_keys.futureLeftJoin(df, tolerance="1days", key=key_cols)
+    resampled_df = get_timestamp_col(resampled_df, "timestamp")
+    return resampled_df

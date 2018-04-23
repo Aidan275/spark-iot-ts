@@ -149,3 +149,9 @@ class IOTHistoryReader(Reader):
             print("WARNING:")
             print("\n".join(messages))
         return valid
+
+    def get_select_statement(self, timestamp_select):
+        select = "select %(timestamp)s datetime as time, pointName as pointName, value as value , unit as unit  from %(view)s" % \
+                 ({'view': self.view_name, 'timestamp': timestamp_select})
+        return select
+

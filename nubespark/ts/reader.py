@@ -173,14 +173,16 @@ class Reader(object):
         if not self._timestamp:
             timestamp_select = ''
 
-        select = "select %(timestamp)s datetime as time, pointName as pointName, value as value , unit as unit  from %(view)s" % \
-                 ({'view': self.view_name, 'timestamp': timestamp_select})
+        select = self.get_select_statement(timestamp_select)
         sql = "%(select)s  where %(date_filter)s  %(tags_filter)s" % (
             {'date_filter': datetime_filter, 'tags_filter': tag_filter, 'select': select})
         return sql
 
     def get_df(self):
         return self._df
+
+    def get_select_statement(self, timestamp_select):
+        pass
 
     @staticmethod
     def _get_datetime_filter(from_date, to_date):

@@ -280,7 +280,8 @@ get_up_time = func.udf(
                                                                                 time_limit, unit=unit), DoubleType())
 
 
-def get_step_duration(step_df, check_col, key_cols, offset=0, duration_col="duration", timestamp_col="timestamp", unit="min"):
+def get_step_duration(step_df, check_col, key_cols, offset=0, duration_col="duration", timestamp_col="timestamp",
+                      unit="min"):
     """
 
     :param step_df:
@@ -305,3 +306,26 @@ def get_sparks(bool_df, check_col, key_cols, offset=0, duration_col="duration", 
     duration_df = get_step_duration(step_df, check_col, key_cols, offset, duration_col, timestamp_col, unit=unit)
     duration_df = duration_df.withColumnRenamed(check_col, "step_value")
     return duration_df
+
+
+def export_sparks(df, ruleRef, dataset):
+    cols = ["time", "timestamp", "pointName", "step_value", "duration"]
+    df = df.select(cols)
+    df = df.withColumnRenamed("time", "datetime")
+    df = df.withColumn("ruleRef", func.lit(ruleRef))
+
+    def get_year_month(val):
+        return datetime.datetime.fromtimestamp(val / (1000 * 1000 * 1000)).strftime("%Y-%m")
+
+    year_month_udf = func.udf(lambda date_val: get_year_month(date_val), StringType())
+    final_df = df.withColumn("yearMonth", year_month_udf(col("datetime")))
+
+    # save sparks
+    final_df.write.format("filodb.spark") \
+        .option("dataset", dataset) \
+        .option("partition_keys", "yearMonth") \
+        .option("row_keys", "datetime,pointName") \
+        .option("chunk_size", "300") \
+        .mode("append") \
+        .save()
+

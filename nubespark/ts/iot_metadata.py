@@ -13,9 +13,10 @@ class IOTMetadata:
     2) Add/Edit/Remove tags in metadata
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, from_=0, size=1024,  **kwargs):
         """
-
+        :param from_: starting offset
+        :param size: number of hits to return
         :param kwargs: es cconnection options like meta.es.nodes, meta.es.port, meta.es.resource
         :return:
         """
@@ -52,11 +53,11 @@ class IOTMetadata:
 
     def read(self, debug=False):
         if self.query is None:
-            return self.es.search(index=self.index, doc_type=self.type)["hits"]
+            return self.es.search(index=self.index, doc_type=self.type, from_=from_m, size=size)["hits"]
         else:
             if debug:
                 print(self.query)
-            return self.es.search(index=self.index, doc_type=self.type, q=self.query)
+            return self.es.search(index=self.index, doc_type=self.type, q=self.query, from_=from_m, size=size)
 
     def prettyPrint(self, data):
         print(json.dumps(data, indent=3, ensure_ascii=False))
@@ -86,7 +87,7 @@ class IOTMetadata:
         }
         self.es.update_by_query(index=self.index, doc_type=self.type, body=body, q=self.query, refresh=True)
         if result:
-            return self.es.search(index=self.index, doc_type=self.type, q=self.query)
+            return self.es.search(index=self.index, doc_type=self.type, q=self.query, from_=from_m, size=size)
         else:
             return True
 
@@ -112,7 +113,7 @@ class IOTMetadata:
         }
         self.es.update_by_query(index=self.index, doc_type=self.type, body=body, q=self.query, refresh=True)
         if result:
-            return self.es.search(index=self.index, doc_type=self.type, q=self.query)
+            return self.es.search(index=self.index, doc_type=self.type, q=self.query, from_=from_m, size=size)
         else:
             return True
 
